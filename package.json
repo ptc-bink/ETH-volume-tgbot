@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "ts-node-dev ./main.ts"
+    "start": "ts-node-dev --no-notify ./main.ts"
   },
   "dependencies": {
     "@ethersproject/providers": "^5.7.2",
@@ -15,6 +15,7 @@
     "fastify": "^5.2.0",
     "mongodb": "^6.12.0",
     "node-telegram-bot-api": "^0.66.0",
+    "punycode": "^2.3.1",
     "request": "^2.88.2",
     "requests": "^0.3.0",
     "telebot": "^1.4.1",

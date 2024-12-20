@@ -1,5 +1,6 @@
 import { setTimeout } from 'timers';
 import express from 'express';
+import fastify from 'fastify';
 // import * as uvicorn from 'uvicorn';
 import { ETHLiquidity } from './chain/ether/ETHLiquidity';
 import { getPairAddress } from './chain/ether/utils';
@@ -27,24 +28,24 @@ interface EthItem {
 
 const PORT = process.env.PORT || 9030;
 
-const processSolana = () => {
-  while (eventSol) {
-    for (let item of solBoost) {
-      try {
-        if (item.isBoost) {
-          item.processTransaction();
-        } else {
-          const index = solBoost.indexOf(item);
-          if (index !== -1) solBoost.splice(index, 1);
-        }
-      } catch (e) {
-        console.log(`Error processing Solana transaction: ${e}`);
-      }
-    }
-    console.log('sol');
-    setTimeout(() => {}, 5000); // Delay for 5 seconds
-  }
-};
+// const processSolana = () => {
+//   while (eventSol) {
+//     for (let item of solBoost) {
+//       try {
+//         if (item.isBoost) {
+//           item.processTransaction();
+//         } else {
+//           const index = solBoost.indexOf(item);
+//           if (index !== -1) solBoost.splice(index, 1);
+//         }
+//       } catch (e) {
+//         console.log(`Error processing Solana transaction: ${e}`);
+//       }
+//     }
+//     console.log('sol');
+//     setTimeout(() => {}, 5000); // Delay for 5 seconds
+//   }
+// };
 
 const processEthereum = async () => {
   while (eventEth) {
@@ -110,12 +111,13 @@ const startServer = async (app: express.Express) => {
   }
 };
 
-app.get('/', async (request: Request, reply: Response) => {
+app.get('/')
+async function readRoot() {
   return { message: 'Hello World' };
-});
+}
 
-app.post('/api/eth/add', async (request: Request, reply: Response) => {
-  const item: EthItem = request.body as EthItem;
+app.post('/api/eth/add');
+async function addEthBoostItem(item: EthItem) {
   const pair = getPairAddress(item.tokenAddress);
   if (!pair) {
     return { success: false };
@@ -141,12 +143,13 @@ app.post('/api/eth/add', async (request: Request, reply: Response) => {
   }
   ethBoost.push(boost);
   return { success: true };
-});
+}
 
-app.get('/api/eth/status', async (request: Request, reply: Response) => {
+app.get('/api/eth/status');
+async function getServerStatus() {
   const num = ethBoost.length;
   return { busy: num >= 1 };
-});
+}
 
 const main = () => {
   startServer(app);

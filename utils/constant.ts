@@ -43,8 +43,8 @@ export const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || '';
 export const BOOST_SERVER_ENDPOINT = "http://127.0.0.1:8000";
 
 // Wallet addresses and keys
-export const BASE_WALLET_ADDRESS = process.env.BASE_WALLET_ADDRESS || '';
-export const BASE_WALLET_PRIVATE_KEY = process.env.BASE_WALLET_PRIVATE_KEY || '';
+// export const BASE_WALLET_ADDRESS = process.env.BASE_WALLET_ADDRESS || '';
+// export const BASE_WALLET_PRIVATE_KEY = process.env.BASE_WALLET_PRIVATE_KEY || '';
 export const SERVICE_WALLET_ADDRESS = process.env.SERVICE_WALLET_ADDRESS || '';
 
 // List of server endpoints

@@ -38,6 +38,8 @@ export async function homePage(bot: TelegramBot, message: TelegramBot.Message): 
   const user = await isExistUser(message.chat.id.toString());
   if (!user) return;
 
+  console.log('user :>> ', user);
+
   const wallet = user.wallets.ether.publicKey;
   const balance = await getWalletBalance(wallet);
 
@@ -72,7 +74,10 @@ export async function homePage(bot: TelegramBot, message: TelegramBot.Message): 
 export async function timePage(bot: TelegramBot, message: TelegramBot.Message): Promise<void> {
   bot.clearReplyListeners();
   const user = await isExistUser(message.chat.id.toString());
+  
   if (!user) return;
+
+  console.log('user :>> ', user);
 
   const wallet = user.wallets.ether.publicKey;
   const balance = await getWalletBalance(wallet);

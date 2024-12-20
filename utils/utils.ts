@@ -70,7 +70,7 @@ export function calculateTxnAndSpeed(time: string, amount: string) {
   return {totalTxn, speed};
 }
 
-export function calcTotVolTax(amount: string): number {
+export function calcToVolTax(amount: string): number {
   if (amount === '0.2') return 100;
   if (amount === '0.35') return 175;
   if (amount === '0.6') return 300;

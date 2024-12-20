@@ -152,6 +152,8 @@ async function getEstimateGas(): Promise<EstimateGas> {
   const gas = 300000;
 
   const txnFee = (gas * Number(gasPrice)) / 10 ** 18;
+
+  console.log('txnFee :>> ', txnFee);
   return {
     txnFee,
     gasPrice: Math.round(Number(gasPrice) / 10 ** 9),
