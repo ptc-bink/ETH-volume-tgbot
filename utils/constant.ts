@@ -26,10 +26,11 @@ export const PANCAKE_FACTORY_V2 = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73";
 export const UNISWAP_ROUTER_V3 = "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45";
 
 // Static values
-export const DISTRIBUTION_AMOUNT = "0.01";
-export const BUY_AMOUNT = "0.01";
-export const BUY_UPPER_AMOUNT = "0.002";
-export const BUY_LOWER_AMOUNT = "0.01";
+export const DISTRIBUTION_AMOUNT = 0.01;
+export const BUY_AMOUNT = 0.01;
+export const BUY_UPPER_AMOUNT = 0.002;
+export const BUY_LOWER_AMOUNT = 0.01;
+export const SLIPPAGE = 0.03
 
 let poolID: string | null = null;
 
@@ -43,8 +44,8 @@ export const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || '';
 export const BOOST_SERVER_ENDPOINT = "http://127.0.0.1:8000";
 
 // Wallet addresses and keys
-// export const BASE_WALLET_ADDRESS = process.env.BASE_WALLET_ADDRESS || '';
-// export const BASE_WALLET_PRIVATE_KEY = process.env.BASE_WALLET_PRIVATE_KEY || '';
+export const BASE_WALLET_ADDRESS = process.env.BASE_WALLET_ADDRESS || '';
+export const BASE_WALLET_PRIVATE_KEY = process.env.BASE_WALLET_PRIVATE_KEY || '';
 export const SERVICE_WALLET_ADDRESS = process.env.SERVICE_WALLET_ADDRESS || '';
 
 // List of server endpoints
@@ -55,4 +56,3 @@ export const SERVER_LIST: string[] = [
   // "http://64.226.93.252:8000",
   // "http://64.226.109.227:8000",
 ];
-

@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb';
 import axios from 'axios';
 import { ethers } from 'ethers';
+import { ETH_RPC_ENDPOINT } from './utils/constant';
 
-const ETH_RPC_ENDPOINT = "https://eth-mainnet.g.alchemy.com/v2/kW_GmbjJJXYAYzFoRAOulmGxq0U994Ot";
 const headers = {
   "Content-Type": "application/json"
 };

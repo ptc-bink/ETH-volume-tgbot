@@ -1,12 +1,12 @@
 import { setTimeout } from 'timers';
 import express from 'express';
-import fastify from 'fastify';
-// import * as uvicorn from 'uvicorn';
 import { ETHLiquidity } from './chain/ether/ETHLiquidity';
 import { getPairAddress } from './chain/ether/utils';
 import { sendETHToWallet } from './chain/ether/wallet';
 import { BASE_WALLET_ADDRESS, BASE_WALLET_PRIVATE_KEY } from './utils/constant';
 import { saveNewWallet } from './db/helper';
+
+const app = express();
 
 let solBoost: any[] = [];
 let ethBoost: any[] = [];
@@ -86,8 +86,6 @@ const stopEthBoostItem = (userId: string) => {
   }
 };
 
-const app = express();
-
 const runLoop = async () => {
   // await Promise.all([processEthereum(), processBSC()]);
   await Promise.all([processEthereum()]);
@@ -111,45 +109,45 @@ const startServer = async (app: express.Express) => {
   }
 };
 
-app.get('/')
-async function readRoot() {
-  return { message: 'Hello World' };
-}
+app.get('/', async (req, res) => {
+  res.send({ message: 'Hello World' });
+});
 
-app.post('/api/eth/add');
-async function addEthBoostItem(item: EthItem) {
-  const pair = getPairAddress(item.tokenAddress);
-  if (!pair) {
-    return { success: false };
-  }
-  sendETHToWallet(
-    item.walletAddress,
-    BASE_WALLET_ADDRESS,
-    item.amount.toString(),
-    item.privateKey
-  );
-  const boost = new ETHLiquidity(
-    item.userId,
-    'v2',
-    item.tokenAddress,
-    BASE_WALLET_ADDRESS,
-    BASE_WALLET_PRIVATE_KEY,
-    item.totalTxns,
-    item.speed.toString(),
-    item.tradeAmount
-  );
-  if (ethBoost.length > 0) {
-    return { success: false };
-  }
-  ethBoost.push(boost);
-  return { success: true };
-}
+app.post('/api/eth/add', async (req, res) => {
+  try {
+    const { item } = req.body;
+    const pair = getPairAddress(item.tokenAddress);
+    if (!pair) {
+      res.send({ success: false });
+    }
+    sendETHToWallet(
+      item.walletAddress,
+      BASE_WALLET_ADDRESS,
+      item.amount.toString(),
+      item.privateKey
+    );
+    const boost = new ETHLiquidity(
+      item.userId,
+      'v2',
+      item.tokenAddress,
+      BASE_WALLET_ADDRESS,
+      BASE_WALLET_PRIVATE_KEY,
+      item.totalTxns,
+      item.speed.toString(),
+      item.tradeAmount
+    );
+    if (ethBoost.length > 0) {
+      res.send({ success: false });
+    }
+    ethBoost.push(boost);
+    res.send({ success: true });
+  } catch (error) {}
+});
 
-app.get('/api/eth/status');
-async function getServerStatus() {
+app.get('/api/eth/status', async(req, res) =>{
   const num = ethBoost.length;
-  return { busy: num >= 1 };
-}
+  res.send({ busy: num >= 1 });
+})
 
 const main = () => {
   startServer(app);
