@@ -8,11 +8,11 @@ import { saveNewWallet } from './db/helper';
 
 const app = express();
 
-let solBoost: any[] = [];
+// let solBoost: any[] = [];
 let ethBoost: any[] = [];
-let bscBoost: any[] = [];
+// let bscBoost: any[] = [];
 let eventEth = true;
-let eventSol = true;
+// let eventSol = true;
 
 interface EthItem {
   userId: string;
@@ -93,16 +93,11 @@ const runLoop = async () => {
 
 const startServer = async (app: express.Express) => {
   try {
-    const threadEth = new Thread(() => runLoop());
-    threadEth.start();
-    console.log('start...');
+    await runLoop();
+
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
-
-    while (true) {
-      setTimeout(() => {}, 100); // Sleep for 100ms
-    }
   } catch (error) {
     eventEth = false;
     console.error('Error starting the server: ', error);
@@ -115,6 +110,7 @@ app.get('/', async (req, res) => {
 
 app.post('/api/eth/add', async (req, res) => {
   try {
+    console.log('req.body :>> ', req.body);
     const { item } = req.body;
     const pair = getPairAddress(item.tokenAddress);
     if (!pair) {

@@ -184,8 +184,9 @@ class ETHLiquidity {
         this.isBoost = false;
         return;
       }
-
+      
       let tokenAbi;
+      tokenAbi = get_erc20_abi();
       const amountIn = amount;
       const deadline = Math.floor(Date.now() / 1000) + 1200;
       const toAddress = this.wallet_addr;
@@ -197,30 +198,29 @@ class ETHLiquidity {
         ])
         .call();
 
-      tokenAbi = get_erc20_abi();
       const tokenContract = new w3.eth.Contract(
         tokenAbi,
         w3.utils.toChecksumAddress(this.token_addr)
       );
 
-      const allowance = await tokenContract.methods.allowance(
+      const allowance = await tokenContract.methods
+        .allowance(
           w3.utils.toChecksumAddress(this.wallet_addr),
           UNISWAP_ROUTER_V2
         )
         .call();
 
-      if (allowance < amountIn) {
+      if (Number(allowance) < amountIn) {
         const approveAmount = 1000000000000000000000000;
         const decimal = await tokenContract.methods.decimals().call();
+        const gasPrice = await w3.eth.getGasPrice();
         const approveFunction = tokenContract.methods.approve(
           UNISWAP_ROUTER_V2,
-          approveAmount * 10 ** decimal
+          approveAmount * 10 ** Number(decimal)
         );
-
         const gas = await approveFunction.estimateGas({
           from: w3.utils.toChecksumAddress(this.wallet_addr),
         });
-        const gasPrice = await w3.eth.getGasPrice();
 
         const approveTx = await approveFunction.buildTransaction({
           gas,
@@ -230,6 +230,14 @@ class ETHLiquidity {
           ),
           chainId: 1,
         });
+        // const approveTx = await approveFunction.buildTransaction({
+        //   gas,
+        //   gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
+        //   nonce: await w3.eth.getTransactionCount(
+        //     w3.utils.toChecksumAddress(this.wallet_addr)
+        //   ),
+        //   chainId: 1,
+        // });
 
         const signedApproveTx = await w3.eth.accounts.signTransaction(
           approveTx,
