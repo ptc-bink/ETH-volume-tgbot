@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 // Reading environment variables
+export const MongoDbURL = process.env.DATABASE || '';
 export const RPC_ENDPOINT = process.env.RPC_ENDPOINT || '';
 export const RPC_WEBSOCKET_ENDPOINT = process.env.RPC_WEBSOCKET_ENDPOINT || '';
 export const SOL_RPC_ENDPOINT = process.env.SOL_RPC_ENDPOINT || '';
@@ -24,6 +25,8 @@ export const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 // export const PANCAKE_FACTORY_V2 = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73";
 export const UNISWAP_ROUTER_V2 = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 export const UNISWAP_ROUTER_V3 = "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45";
+export const UNISWAP_FACTORY_V2 = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
+export const UNISWAP_FACTORY_V3 = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
 
 // Static values
 export const DISTRIBUTION_AMOUNT = 0.01;

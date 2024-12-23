@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { Web3 } from 'web3';
-import { get_router_abi } from '../../utils/utils';
+import { get_factory_v2_abi, get_factory_v3_abi, get_router_abi } from '../../utils/utils';
 import {
   PRIMARY_KEY,
   ETHERSCAN_API_KEY,
   WETH_ADDRESS,
   MEV_BLOCK_RPC_ENDPOINT,
+  UNISWAP_FACTORY_V2,
 } from '../../utils/constant';
 
 const w3 = new Web3(new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT));
@@ -101,7 +102,51 @@ async function getTokenTaxInfo(
   }
 }
 
-async function getTokenABI(tokenAddress: string){
+// Check if token + ETH pair is existed using Uniswap Factory
+async function getTokenEthPair(tokenAddress: string) {
+  const abi = get_factory_v2_abi();
+  const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2)
+
+  const pair = await factoryContract.methods.getPair(
+    tokenAddress, WETH_ADDRESS
+  ).call();
+
+  console.log('tokenAddress, WETH_ADDRESS :>> ', tokenAddress, WETH_ADDRESS);
+  console.log('pair :>> ', pair);
+  if (pair) {
+    return true;
+  } else false
+}
+
+async function getTokenInfo(tokenAddress: string) {
+  try {
+    const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`)
+
+    if (response.status == 200) {
+      return response.data;      
+    } else return false
+  } catch (error) {
+    return false;
+  }
+}
+
+// Check if token + ETH pool is existed using Uniswap Factory
+async function getTokenEthPool(tokenAddress: string) {
+  const abi = get_factory_v3_abi();
+  const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2)
+
+  const pair = await factoryContract.methods.getPool(
+    tokenAddress, WETH_ADDRESS
+  ).call();
+
+  console.log('tokenAddress, WETH_ADDRESS :>> ', tokenAddress, WETH_ADDRESS);
+  console.log('pair :>> ', pair);
+  if (pair) {
+    return true;
+  } else false
+}
+
+async function getTokenABI(tokenAddress: string) {
   try {
     const response = await axios.get(
       `https://api.etherscan.io/api?module=contract&action=getabi&address=${tokenAddress}&apikey=${ETHERSCAN_API_KEY}`
@@ -180,6 +225,8 @@ export {
   getTokenTaxInfo,
   getTokenABI,
   isWhitelisted,
+  getTokenInfo,
   getEstimateGas,
+  getTokenEthPair,
   getEstimateConfirmTime,
 };

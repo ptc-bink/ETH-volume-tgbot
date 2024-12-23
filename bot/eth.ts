@@ -1,7 +1,7 @@
 import TelegramBot, { InlineKeyboardMarkup, InlineKeyboardButton } from "node-telegram-bot-api";
 import { isExistUser } from "../db/helper";
 import { getWalletBalance } from "../chain/ether/wallet";
-import Web3 from "web3";
+import Web3, { Address } from "web3";
 import { MEV_BLOCK_RPC_ENDPOINT } from "..//utils/constant";
 
 export const w3 = new Web3(new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT));
@@ -37,8 +37,6 @@ export async function homePage(bot: TelegramBot, message: TelegramBot.Message): 
   bot.clearReplyListeners();
   const user = await isExistUser(message.chat.id.toString());
   if (!user) return;
-
-  console.log('user :>> ', user);
 
   const wallet = user.wallets.ether.publicKey;
   const balance = await getWalletBalance(wallet);
@@ -76,8 +74,6 @@ export async function timePage(bot: TelegramBot, message: TelegramBot.Message): 
   const user = await isExistUser(message.chat.id.toString());
   
   if (!user) return;
-
-  console.log('user :>> ', user);
 
   const wallet = user.wallets.ether.publicKey;
   const balance = await getWalletBalance(wallet);

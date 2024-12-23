@@ -154,9 +154,9 @@ class ETHLiquidity {
       const txReceipt = await w3.eth.getTransactionReceipt(txHash);
       this.txn -= 1;
       const balance = await this.getBalance();
-      if (balance.token > 10 ** (balance.decimals / 2)) {
-        await this.swapTokenToETH(balance.token);
-      }
+      // if (balance.token > 10 ** (balance.decimals / 2)) {
+      //   await this.swapTokenToETH(balance.token);
+      // }
 
       return time;
     } catch (e) {
@@ -167,145 +167,145 @@ class ETHLiquidity {
     }
   }
 
-  async swapTokenToETH(amount: number): Promise<void> {
-    console.log('TOKEN ---->>>> ETH');
+  // async swapTokenToETH(amount: number): Promise<void> {
+  //   console.log('TOKEN ---->>>> ETH');
 
-    try {
-      let routerContract;
-      let abi;
+  //   try {
+  //     let routerContract;
+  //     let abi;
 
-      if (this.dexId === 'v3') {
-        abi = get_router_v3_abi();
-        routerContract = new w3.eth.Contract(abi, UNISWAP_ROUTER_V3);
-      } else if (this.dexId === 'v2') {
-        abi = get_router_abi();
-        routerContract = new w3.eth.Contract(abi, UNISWAP_ROUTER_V2);
-      } else {
-        this.isBoost = false;
-        return;
-      }
+  //     if (this.dexId === 'v3') {
+  //       abi = get_router_v3_abi();
+  //       routerContract = new w3.eth.Contract(abi, UNISWAP_ROUTER_V3);
+  //     } else if (this.dexId === 'v2') {
+  //       abi = get_router_abi();
+  //       routerContract = new w3.eth.Contract(abi, UNISWAP_ROUTER_V2);
+  //     } else {
+  //       this.isBoost = false;
+  //       return;
+  //     }
       
-      let tokenAbi;
-      tokenAbi = get_erc20_abi();
-      const amountIn = amount;
-      const deadline = Math.floor(Date.now() / 1000) + 1200;
-      const toAddress = this.wallet_addr;
+  //     let tokenAbi;
+  //     tokenAbi = get_erc20_abi();
+  //     const amountIn = amount;
+  //     const deadline = Math.floor(Date.now() / 1000) + 1200;
+  //     const toAddress = this.wallet_addr;
 
-      const expectedAmountOut = await routerContract.methods
-        .getAmountsOut(amountIn, [
-          w3.utils.toChecksumAddress(this.token_addr),
-          w3.utils.toChecksumAddress(WETH_ADDRESS),
-        ])
-        .call();
+  //     const expectedAmountOut = await routerContract.methods
+  //       .getAmountsOut(amountIn, [
+  //         w3.utils.toChecksumAddress(this.token_addr),
+  //         w3.utils.toChecksumAddress(WETH_ADDRESS),
+  //       ])
+  //       .call();
 
-      const tokenContract = new w3.eth.Contract(
-        tokenAbi,
-        w3.utils.toChecksumAddress(this.token_addr)
-      );
+  //     const tokenContract = new w3.eth.Contract(
+  //       tokenAbi,
+  //       w3.utils.toChecksumAddress(this.token_addr)
+  //     );
 
-      const allowance = await tokenContract.methods
-        .allowance(
-          w3.utils.toChecksumAddress(this.wallet_addr),
-          UNISWAP_ROUTER_V2
-        )
-        .call();
+  //     const allowance = await tokenContract.methods
+  //       .allowance(
+  //         w3.utils.toChecksumAddress(this.wallet_addr),
+  //         UNISWAP_ROUTER_V2
+  //       )
+  //       .call();
 
-      if (Number(allowance) < amountIn) {
-        const approveAmount = 1000000000000000000000000;
-        const decimal = await tokenContract.methods.decimals().call();
-        const gasPrice = await w3.eth.getGasPrice();
-        const approveFunction = tokenContract.methods.approve(
-          UNISWAP_ROUTER_V2,
-          approveAmount * 10 ** Number(decimal)
-        );
-        const gas = await approveFunction.estimateGas({
-          from: w3.utils.toChecksumAddress(this.wallet_addr),
-        });
+  //     if (Number(allowance) < amountIn) {
+  //       const approveAmount = 1000000000000000000000000;
+  //       const decimal = await tokenContract.methods.decimals().call();
+  //       const gasPrice = await w3.eth.getGasPrice();
+  //       const approveFunction = tokenContract.methods.approve(
+  //         UNISWAP_ROUTER_V2,
+  //         approveAmount * 10 ** Number(decimal)
+  //       );
+  //       const gas = await approveFunction.estimateGas({
+  //         from: w3.utils.toChecksumAddress(this.wallet_addr),
+  //       });
 
-        const approveTx = await approveFunction.buildTransaction({
-          gas,
-          gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
-          nonce: await w3.eth.getTransactionCount(
-            w3.utils.toChecksumAddress(this.wallet_addr)
-          ),
-          chainId: 1,
-        });
-        // const approveTx = await approveFunction.buildTransaction({
-        //   gas,
-        //   gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
-        //   nonce: await w3.eth.getTransactionCount(
-        //     w3.utils.toChecksumAddress(this.wallet_addr)
-        //   ),
-        //   chainId: 1,
-        // });
+  //       const approveTx = await approveFunction.buildTransaction({
+  //         gas,
+  //         gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
+  //         nonce: await w3.eth.getTransactionCount(
+  //           w3.utils.toChecksumAddress(this.wallet_addr)
+  //         ),
+  //         chainId: 1,
+  //       });
+  //       // const approveTx = await approveFunction.buildTransaction({
+  //       //   gas,
+  //       //   gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
+  //       //   nonce: await w3.eth.getTransactionCount(
+  //       //     w3.utils.toChecksumAddress(this.wallet_addr)
+  //       //   ),
+  //       //   chainId: 1,
+  //       // });
 
-        const signedApproveTx = await w3.eth.accounts.signTransaction(
-          approveTx,
-          this.owner
-        );
-        const data = {
-          jsonrpc: '2.0',
-          method: 'eth_sendRawTransaction',
-          params: [w3.utils.toHex(signedApproveTx.rawTransaction)],
-          id: 1,
-        };
+  //       const signedApproveTx = await w3.eth.accounts.signTransaction(
+  //         approveTx,
+  //         this.owner
+  //       );
+  //       const data = {
+  //         jsonrpc: '2.0',
+  //         method: 'eth_sendRawTransaction',
+  //         params: [w3.utils.toHex(signedApproveTx.rawTransaction)],
+  //         id: 1,
+  //       };
 
-        const response = await axios.post(MEV_BLOCK_RPC_ENDPOINT, data);
-        if (response.status !== 200) {
-          return;
-        }
-        const approveTxHash = response.data.result;
-        await w3.eth.getTransactionReceipt(approveTxHash);
-      }
+  //       const response = await axios.post(MEV_BLOCK_RPC_ENDPOINT, data);
+  //       if (response.status !== 200) {
+  //         return;
+  //       }
+  //       const approveTxHash = response.data.result;
+  //       await w3.eth.getTransactionReceipt(approveTxHash);
+  //     }
 
-      const swapFunction =
-        routerContract.methods.swapExactTokensForETHSupportingFeeOnTransferTokens(
-          amountIn,
-          0,
-          [
-            w3.utils.toChecksumAddress(this.token_addr),
-            w3.utils.toChecksumAddress(WETH_ADDRESS),
-          ],
-          toAddress,
-          deadline
-        );
+  //     const swapFunction =
+  //       routerContract.methods.swapExactTokensForETHSupportingFeeOnTransferTokens(
+  //         amountIn,
+  //         0,
+  //         [
+  //           w3.utils.toChecksumAddress(this.token_addr),
+  //           w3.utils.toChecksumAddress(WETH_ADDRESS),
+  //         ],
+  //         toAddress,
+  //         deadline
+  //       );
 
-      const gas = await swapFunction.estimateGas({
-        from: w3.utils.toChecksumAddress(this.wallet_addr),
-      });
-      const gasPrice = await w3.eth.getGasPrice();
+  //     const gas = await swapFunction.estimateGas({
+  //       from: w3.utils.toChecksumAddress(this.wallet_addr),
+  //     });
+  //     const gasPrice = await w3.eth.getGasPrice();
 
-      const tx = await swapFunction.buildTransaction({
-        gas,
-        gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
-        nonce: await w3.eth.getTransactionCount(
-          w3.utils.toChecksumAddress(this.wallet_addr)
-        ),
-        chainId: 1,
-      });
+  //     const tx = await swapFunction.buildTransaction({
+  //       gas,
+  //       gasPrice: w3.utils.toWei((Number(gasPrice) + 2).toString(), 'gwei'),
+  //       nonce: await w3.eth.getTransactionCount(
+  //         w3.utils.toChecksumAddress(this.wallet_addr)
+  //       ),
+  //       chainId: 1,
+  //     });
 
-      const signedTx = await w3.eth.accounts.signTransaction(tx, this.owner);
+  //     const signedTx = await w3.eth.accounts.signTransaction(tx, this.owner);
 
-      const data = {
-        jsonrpc: '2.0',
-        method: 'eth_sendRawTransaction',
-        params: [w3.utils.toHex(signedTx.rawTransaction)],
-        id: 1,
-      };
+  //     const data = {
+  //       jsonrpc: '2.0',
+  //       method: 'eth_sendRawTransaction',
+  //       params: [w3.utils.toHex(signedTx.rawTransaction)],
+  //       id: 1,
+  //     };
 
-      const response = await axios.post(MEV_BLOCK_RPC_ENDPOINT, data);
-      if (response.status !== 200) {
-        return;
-      }
+  //     const response = await axios.post(MEV_BLOCK_RPC_ENDPOINT, data);
+  //     if (response.status !== 200) {
+  //       return;
+  //     }
 
-      const txHash = response.data.result;
-      await w3.eth.getTransactionReceipt(txHash);
-    } catch (e) {
-      this.isBoost = false;
-      this.isWorking = false;
-      console.error('error:', e);
-    }
-  }
+  //     const txHash = response.data.result;
+  //     await w3.eth.getTransactionReceipt(txHash);
+  //   } catch (e) {
+  //     this.isBoost = false;
+  //     this.isWorking = false;
+  //     console.error('error:', e);
+  //   }
+  // }
 
   async getBalance(): Promise<Balance> {
     let abi;

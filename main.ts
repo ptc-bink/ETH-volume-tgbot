@@ -17,6 +17,8 @@ import {
   getTokenTaxInfo,
   isWhitelisted,
   getEstimateGas,
+  getTokenEthPair,
+  getTokenInfo,
 } from './chain/ether/utils';
 import { calculateTxnAndSpeed, calcToVolTax } from './utils/utils';
 import { SERVER_LIST } from './utils/constant';
@@ -24,6 +26,7 @@ import { SERVER_LIST } from './utils/constant';
 // import * as bscUtil from './chain/bsc/utils';
 // import * as bscBot from './bot/bsc';
 import { homePage, timePage, mainMenu, w3 } from './bot/eth';
+import { Address } from 'web3';
 
 dotenv.config();
 
@@ -34,7 +37,6 @@ const bot = new TelegramBot(API_TOKEN, { polling: true });
 let currentUserList: Array<any> = [];
 
 bot.on(`message`, async (msg) => {
-  console.log('msg---->>>', msg);
   const chatId = msg.chat.id!;
   const text = msg.text!;
   const msgId = msg.message_id!;
@@ -47,18 +49,18 @@ bot.on(`message`, async (msg) => {
     switch (text) {
       case `/start`:
         const userExists = await isExistUser(msg.chat.id.toString()); // Await the check
-        console.log('userExists :>> ', userExists);
+
         if (!userExists) {
           currentUserList = await insertUser(msg.chat.id.toString());
         } else {
           currentUserList = await getUsers();
         }
-        console.log('currentUserList :>> ', currentUserList);
+
         mainMenu(bot, msg);
         break;
 
       default:
-        await bot.deleteMessage(chatId, msgId);
+        break;
     }
   } catch (e) {
     console.log('error -> \n', e);
@@ -68,7 +70,7 @@ bot.on(`message`, async (msg) => {
 bot.on('callback_query', async (call: CallbackQuery) => {
   if (!currentUserList) {
     const userExists = await isExistUser(call.message!.chat.id.toString()); // Await the check
-    console.log('userExists :>> ', userExists);
+
     if (!userExists) {
       currentUserList = await insertUser(call.message!.chat.id.toString());
     } else {
@@ -109,46 +111,46 @@ bot.on('callback_query', async (call: CallbackQuery) => {
     //   }
     //   break;
 
-    case 'all':
-      // bot.clearStepHandlerByChatId(call.message!.chat.id);
-      for (let item of currentUserList) {
-        if (item.id === call.message!.chat.id) {
-          let balance = 0;
-          let symbol = '';
-          let bal: any;
-          if (item.chain === 'eth') {
-            const bal = await getWalletBalance(item.wallets.ether.publicKey);
-            balance = parseFloat(bal.eth);
-            symbol = 'ETH';
-          }
-          // if (item.chain === 'bsc') {
-          //   const bal = bsc.getWalletBalance(item.wallets.ether.publicKey);
-          //   balance = bal.bsc;
-          //   symbol = 'BNB';
-          // }
-          if (parseFloat(bal.eth) - 0.003 <= 0) {
-            bot.sendMessage(call.message!.chat.id, 'Insufficient funds');
-            homePage(bot, call.message!);
-            return;
-          }
-          item.withdrawAmount = balance - 0.003;
-          const buttons: InlineKeyboardButton[][] = [
-            [{ text: '✅ Confirm', callback_data: 'confirm' }],
-            [{ text: '👈 Return', callback_data: 'input_amount' }],
-          ];
-          const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
-          bot.sendMessage(
-            call.message!.chat.id,
-            `<b>Recipient Address</b>\n${item.receiver}\n\n<b>Amount</b>\n${balance} ${symbol}`,
-            {
-              reply_markup: keyboard,
-              parse_mode: 'HTML',
-            }
-          );
-          return;
-        }
-      }
-      break;
+    // case 'all':
+    //   // bot.clearStepHandlerByChatId(call.message!.chat.id);
+    //   for (let item of currentUserList) {
+    //     if (item.id === call.message!.chat.id) {
+    //       let balance = 0;
+    //       let symbol = '';
+    //       let bal: any;
+    //       if (item.chain === 'eth') {
+    //         const bal = await getWalletBalance(item.wallets.ether.publicKey);
+    //         balance = parseFloat(bal.eth);
+    //         symbol = 'ETH';
+    //       }
+    //       // if (item.chain === 'bsc') {
+    //       //   const bal = bsc.getWalletBalance(item.wallets.ether.publicKey);
+    //       //   balance = bal.bsc;
+    //       //   symbol = 'BNB';
+    //       // }
+    //       if (parseFloat(bal.eth) - 0.003 <= 0) {
+    //         bot.sendMessage(call.message!.chat.id, 'Insufficient funds');
+    //         homePage(bot, call.message!);
+    //         return;
+    //       }
+    //       item.withdrawAmount = balance - 0.003;
+    //       const buttons: InlineKeyboardButton[][] = [
+    //         [{ text: '✅ Confirm', callback_data: 'confirm' }],
+    //         [{ text: '👈 Return', callback_data: 'input_amount' }],
+    //       ];
+    //       const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
+    //       bot.sendMessage(
+    //         call.message!.chat.id,
+    //         `<b>Recipient Address</b>\n${item.receiver}\n\n<b>Amount</b>\n${balance} ${symbol}`,
+    //         {
+    //           reply_markup: keyboard,
+    //           parse_mode: 'HTML',
+    //         }
+    //       );
+    //       return;
+    //     }
+    //   }
+    //   break;
 
     case 'withdraw':
       withdrawPage(call.message!);
@@ -227,45 +229,41 @@ bot.on('callback_query', async (call: CallbackQuery) => {
           //   wallet_addr = item['wallets']['ether']['publicKey'];
           // }
 
-          bot.deleteMessage(call.message!.chat.id, call.message!.message_id);
           bot.sendMessage(
             call.message!.chat.id,
-            `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).` +
-              `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.` +
-              `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.` +
-              `🤖 Honeypot detector.` +
-              `🤖 Liquidity pool need to be locked for at least 30 days or burned.` +
-              `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.` +
-              `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:` +
-              `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.` +
-              `<i>You choose the ${item.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>` +
-              `<i>${item.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>` +
-              `Mode ${item.mode}` +
-              `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>` +
-              `<b>Balance</b>: ${wallet_bal}` +
-              `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
-              `<i>Gas price are updated in real time.</i>` +
-              `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
-              `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>`,
+            `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).\n` +
+            `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n` +
+            `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n` +
+            `🤖 Honeypot detector.\n` +
+            `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n` +
+            `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n` +
+            `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
+            `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n` +
+            `<i>You choose the ${item.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
+            `<i>${item.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n` +
+            `Mode ${item.mode}\n` +
+            `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n` +
+            `<b>Balance</b>: ${wallet_bal}\n` +
+            `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
+            `<i>Gas price are updated in real time.</i>\n` +
+            `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
+            `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
             { parse_mode: 'HTML' }
           );
+
           await timePage(bot, call.message!);
           tokenPage(call.message);
 
           bot.once(`message`, async (msg) => {
             if (msg.text) {
-              await bot.sendMessage(call.message!.chat.id, msg.text, {
-                reply_markup: {
-                  inline_keyboard: [
-                    [
-                      { text: `Input PoolID`, callback_data: `sendPoolId` },
-                      { text: `Reset`, callback_data: `sendTokenAddr` },
-                    ],
-                  ],
-                  force_reply: false,
-                },
-                parse_mode: 'HTML',
-              });
+              const address = msg.text;
+
+              if (w3.utils.isAddress(address)) {
+                await tokenAddressPage(call.message, address);
+              } else {
+                await bot.sendMessage(call.message!.chat.id, `❗️ Type correct Token address ❗️`)
+                tokenPage(call.message);
+              }
             }
           });
         }
@@ -277,6 +275,14 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       homePage(bot, call.message!);
       return;
 
+    case 'sendTokenAddr':
+      tokenPage(call.message);
+
+      bot.once('message', async (msg) => {
+
+      })
+      return;
+
     case 'token_address_6':
       console.log('currentUserList :>> ', currentUserList);
       console.log('call.message!.chat.id :>> ', call.message!.chat.id);
@@ -284,8 +290,6 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       for (let item of currentUserList) {
         if (item.id === call.message!.chat.id.toString()) {
           item.time = call.data?.split('_')[2];
-
-          console.log('item.mode :>> ', item.mode);
 
           item.mode = '⚡⚡⚡ Fast Mode 8 hours selected';
 
@@ -306,8 +310,6 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       for (let item of currentUserList) {
         if (item.id === call.message!.chat.id) {
           item.time = call.data?.split('_')[2];
-
-          console.log('item.mode :>> ', item.mode);
 
           item.mode = '⚡⚡ Normal Mode 24 hours selected';
 
@@ -483,8 +485,6 @@ async function inputAmount(message: Message) {
 
 // Token page handler
 function tokenPage(message: any): void {
-  bot.deleteMessage(message.chat.id, message.message_id);
-
   const buttons = [[{ text: '👈 Return', callback_data: 'time_page' }]];
   const keyboard = { inline_keyboard: buttons };
 
@@ -514,6 +514,34 @@ async function inputToken(message: any) {
     user.token = message.text;
     showServerList(message);
   }
+}
+
+async function tokenAddressPage(message: any, tokenAddress: Address) {
+  const tokenInfo = await getTokenInfo(tokenAddress);
+  const pairNum = {
+    v2: 0,
+    v3: 0
+  }
+
+  for (let pairInfo of tokenInfo.pairs) {
+    if (pairInfo.chainId == 'ethereum' && pairInfo.dexId == 'uniswap' && pairInfo.quoteToken.symbol == 'WETH' && pairInfo.liquidity.quote > 5 && pairInfo.marketCap > 250000) {
+      switch (pairInfo.labels[0]) {
+        case "v2":
+          pairNum.v2++;
+          break;
+
+        case "v3":
+          pairNum.v3++;
+          break;
+
+        default:
+          break;
+      }
+    }
+  }
+  const isPoolWithWeth = await getTokenEthPair(tokenAddress);
+
+  console.log('isPoolWithWeth :>> ', isPoolWithWeth);
 }
 
 // Show server list handler
@@ -583,10 +611,8 @@ async function startBoost(message: any, index: number) {
       bot.deleteMessage(message.chat.id, message.message_id);
       bot.sendMessage(
         message.chat.id,
-        `Insufficient funds, please send all the funds in the wallet that are indicated below.\n\n<i>${serviceFee} + ${gasFee} = ${
-          gasFee + serviceFee
-        }</i>\n\n<i>To this address:</i>\n<code>${
-          user.wallets.ether.publicKey
+        `Insufficient funds, please send all the funds in the wallet that are indicated below.\n\n<i>${serviceFee} + ${gasFee} = ${gasFee + serviceFee
+        }</i>\n\n<i>To this address:</i>\n<code>${user.wallets.ether.publicKey
         }</code>`,
         { parse_mode: 'HTML' }
       );

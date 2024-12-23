@@ -3,14 +3,14 @@ import { MongoClient } from 'mongodb';
 import * as EtherWallet from '../chain/ether/wallet'; // Assuming you have this module in TypeScript
 // import * as SolanaWallet from '../chain/solana/wallet'; // Assuming you have this module in TypeScript
 import * as etherUtils from '../chain/ether/utils'; // Assuming these are utility functions in TypeScript
+import { MongoDbURL } from '../utils/constant';
 // import * as solanaUtils from '../chain/solana/utils'; // Assuming these are utility functions in TypeScript
 // import * as bsc from '../chain/bsc/utils'; // Assuming this is a utility module for BSC
 
 // Load environment variables
 dotenv.config();
 
-const DB_PATH = process.env.DATABASE || '';
-const client = new MongoClient(DB_PATH);
+const client = new MongoClient(MongoDbURL);
 const db = client.db('BoosterBot');
 
 // Get the user database

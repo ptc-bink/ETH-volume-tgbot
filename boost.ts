@@ -137,7 +137,9 @@ app.post('/api/eth/add', async (req, res) => {
     }
     ethBoost.push(boost);
     res.send({ success: true });
-  } catch (error) {}
+  } catch (error) {
+    res.send(error)
+  }
 });
 
 app.get('/api/eth/status', async(req, res) =>{

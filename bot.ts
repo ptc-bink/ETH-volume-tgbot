@@ -1,13 +1,11 @@
 import { MongoClient } from 'mongodb';
 import axios from 'axios';
 import { ethers } from 'ethers';
-import { ETH_RPC_ENDPOINT } from './utils/constant';
+import { ETH_RPC_ENDPOINT, MongoDbURL } from './utils/constant';
 
 const headers = {
   "Content-Type": "application/json"
 };
-
-const MongoDbURL = process.env.DATABASE
 
 const client = new MongoClient(MongoDbURL as string);
 
