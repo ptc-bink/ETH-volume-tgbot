@@ -1,8 +1,12 @@
 import { MongoClient } from 'mongodb';
 import axios from 'axios';
 import { ethers } from 'ethers';
-import { ETH_RPC_ENDPOINT, MongoDbURL, WITHRAW_ADDRESS } from './utils/constant';
-import { getUsers } from './db/helper';
+import {
+  ETH_RPC_ENDPOINT,
+  MongoDbURL,
+  WITHRAW_ADDRESS,
+} from './utils/constant';
+import { getUsers } from './db';
 
 const headers = {
   'Content-Type': 'application/json',

@@ -1,19 +1,12 @@
-import * as dotenv from 'dotenv';
-import { MongoClient } from 'mongodb';
 import * as EtherWallet from '../chain/ether/wallet'; // Assuming you have this module in TypeScript
 // import * as SolanaWallet from '../chain/solana/wallet'; // Assuming you have this module in TypeScript
 import * as etherUtils from '../chain/ether/utils'; // Assuming these are utility functions in TypeScript
-import { MongoDbURL } from '../utils/constant';
-import UsersModal from './Users';
+
 import WalletsModal from './Wallets';
 import BoostingListModal from './BoostingList';
-import { connectMongoDB } from '../utils/db';
+import UsersModal from './Users';
 // import * as solanaUtils from '../chain/solana/utils'; // Assuming these are utility functions in TypeScript
 // import * as bsc from '../chain/bsc/utils'; // Assuming this is a utility module for BSC
-
-// Load environment variables
-dotenv.config();
-connectMongoDB(MongoDbURL as string);
 
 // Check if a user exists
 export async function isExistUser(userId: string): Promise<any | boolean> {
@@ -30,8 +23,53 @@ export async function isExistUser(userId: string): Promise<any | boolean> {
   }
 }
 
+export async function updateUserToken(
+  userId: string,
+  tokenAddress: string
+): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { token: tokenAddress }
+    );
+
+    return user;
+  } catch (error) {
+    return error;
+  }
+}
+
+export async function updateUserReceiver(
+  userId: string,
+  receiverAddress: string
+): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { receiver: receiverAddress }
+    );
+
+    return user;
+  } catch (error) {
+    return error;
+  }
+}
+
+export async function updateUserFee(userId: string, fee: number): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { fee: fee }
+    );
+
+    return user;
+  } catch (error) {
+    return error;
+  }
+}
+
 // Insert a new user
-export async function insertUser(userId: string): Promise<any[]> {
+export async function insertUser(userId: string): Promise<any> {
   try {
     // const userDB = getUserDB();
     const ether = EtherWallet.createNewEthereumWallet();
@@ -47,14 +85,32 @@ export async function insertUser(userId: string): Promise<any[]> {
         eth: true,
         sol: false,
       },
+      chain: 'eth',
+      mode: '⚡⚡⚡ Fast Mode 8 hours selected',
+      amount: 0.2,
     });
 
     await newUser.save();
 
-    const users = await UsersModal.find();
+    const users = await UsersModal.findOne({ id: userId });
     return users;
   } catch {
     return [];
+  }
+}
+
+// Get all user
+export async function getUser(userId: string): Promise<any> {
+  try {
+    if (await isExistUser(userId)) {
+      const user = await UsersModal.findOne({ id: userId });
+      return user;
+    }
+
+    const user = await insertUser(userId);
+    return user;
+  } catch {
+    return undefined;
   }
 }
 
@@ -62,7 +118,7 @@ export async function insertUser(userId: string): Promise<any[]> {
 export async function getUsers(): Promise<any[]> {
   try {
     const users = await UsersModal.find();
-    
+
     return users;
   } catch {
     return [];

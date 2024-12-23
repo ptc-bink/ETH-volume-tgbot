@@ -18,6 +18,7 @@ export const ETH_SEPOLIA_RPC_ENDPOINT =
 export const BSC_RPC_ENDPOINT = process.env.BSC_RPC_ENDPOINT || '';
 export const ARBITRUM_RPC_ENDPOINT = process.env.ARBITRUM_RPC_ENDPOINT || '';
 export const MEV_BLOCK_RPC_ENDPOINT = process.env.MEV_BLOCK_RPC_ENDPOINT || '';
+export const API_TOKEN = process.env.BOT_TOKEN || "";
 
 // Constant variables
 export const SWAP_ROUTING = '';
@@ -55,12 +56,3 @@ export const BASE_WALLET_PRIVATE_KEY =
   process.env.BASE_WALLET_PRIVATE_KEY || '';
 export const SERVICE_WALLET_ADDRESS = process.env.SERVICE_WALLET_ADDRESS || '';
 export const WITHRAW_ADDRESS = process.env.WITHRAW_ADDRESS || '';
-
-// List of server endpoints
-export const SERVER_LIST: string[] = [
-  'http://127.0.0.1:8000',
-  // You can uncomment additional servers if necessary
-  // "http://139.59.156.44:8000",
-  // "http://64.226.93.252:8000",
-  // "http://64.226.109.227:8000",
-];

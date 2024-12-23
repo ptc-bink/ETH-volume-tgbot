@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Web3 } from 'web3';
+import { Uint256, Web3 } from 'web3';
 import {
   get_router_v3_abi,
   get_router_abi,
@@ -10,6 +10,7 @@ import {
   WETH_ADDRESS,
   UNISWAP_ROUTER_V3,
   UNISWAP_ROUTER_V2,
+  SLIPPAGE,
 } from '../../utils/constant'; // import constants
 import { getEstimateConfirmTime } from './utils';
 
@@ -78,23 +79,27 @@ class ETHLiquidity {
         return false;
       }
 
-      const slippage = 0.03;
       const deadline = Math.floor(Date.now() / 1000) + 1200;
       const to_address = this.wallet_addr;
       const amount_in_wei = w3.utils.toWei(amount.toString(), 'ether');
 
-      const expectedAmountOut = await routerContract.methods
+      const expectedAmountOut : Uint256[] = await routerContract.methods
         .getAmountsOut(amount_in_wei, [
           w3.utils.toChecksumAddress(WETH_ADDRESS),
           w3.utils.toChecksumAddress(this.token_addr),
         ])
         .call();
 
+      console.log('expectedAmountOut :>> ', expectedAmountOut);
+
       let amount_out_min =
-        expectedAmountOut[expectedAmountOut.length - 1] * (1 - slippage);
+        Number(expectedAmountOut[expectedAmountOut.length - 1]) *
+        (1 - SLIPPAGE);
+
       amount_out_min = parseFloat(
         w3.utils.toWei(amount_out_min.toString(), 'wei')
       );
+
       if (amount_out_min <= 0) {
         return false;
       }
@@ -102,7 +107,7 @@ class ETHLiquidity {
       console.log(amount_out_min);
       console.log(deadline);
 
-      const swapFunction = routerContract.methods.swapExactETHForTokens(
+      const swapFunction : any = routerContract.methods.swapExactETHForTokens(
         amount_out_min,
         [
           w3.utils.toChecksumAddress(WETH_ADDRESS),
@@ -184,7 +189,7 @@ class ETHLiquidity {
   //       this.isBoost = false;
   //       return;
   //     }
-      
+
   //     let tokenAbi;
   //     tokenAbi = get_erc20_abi();
   //     const amountIn = amount;

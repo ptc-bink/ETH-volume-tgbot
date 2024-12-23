@@ -1,12 +1,13 @@
 import { setTimeout } from 'timers';
 import express from 'express';
-import { ETHLiquidity } from './chain/ether/ETHLiquidity';
-import { getTokenInfo } from './chain/ether/utils';
-import { sendETHToWallet } from './chain/ether/wallet';
-import { BASE_WALLET_ADDRESS, BASE_WALLET_PRIVATE_KEY } from './utils/constant';
-import { saveNewWallet } from './db/helper';
-
-const app = express();
+import { ETHLiquidity } from '../chain/ether/ETHLiquidity';
+import { getTokenInfo } from '../chain/ether/utils';
+import { sendETHToWallet } from '../chain/ether/wallet';
+import {
+  BASE_WALLET_ADDRESS,
+  BASE_WALLET_PRIVATE_KEY,
+} from '../utils/constant';
+import { saveNewWallet } from '../db';
 
 // let solBoost: any[] = [];
 let ethBoost: any[] = [];
@@ -25,8 +26,6 @@ interface EthItem {
   amount: number;
   tradeAmount: number;
 }
-
-const PORT = process.env.PORT || 9030;
 
 // const processSolana = () => {
 //   while (eventSol) {
@@ -86,69 +85,43 @@ const stopEthBoostItem = (userId: string) => {
   }
 };
 
-const runLoop = async () => {
+export const addEthLiquidity = async (item: any) => {
+  const tokenInfo = await getTokenInfo(item.tokenAddress);
+
+  if (!tokenInfo) return false;
+
+  await sendETHToWallet(
+    item.walletAddress,
+    BASE_WALLET_ADDRESS,
+    item.amount.toString(),
+    item.privateKey
+  );
+
+  const boost = new ETHLiquidity(
+    item.userId,
+    'v2',
+    item.tokenAddress,
+    BASE_WALLET_ADDRESS,
+    BASE_WALLET_PRIVATE_KEY,
+    item.totalTxns,
+    item.speed.toString(),
+    item.tradeAmount
+  );
+
+  if (ethBoost.length > 0) return false;
+
+  ethBoost.push(boost);
+
+  return true;
+};
+
+export const addEthStatus = () => {
+  const num = ethBoost.length;
+
+  return { busy: num >= 1 };
+};
+
+export const runLoop = async () => {
   // await Promise.all([processEthereum(), processBSC()]);
   await Promise.all([processEthereum()]);
 };
-
-const startServer = async (app: express.Express) => {
-  try {
-    await runLoop();
-
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  } catch (error) {
-    eventEth = false;
-    console.error('Error starting the server: ', error);
-  }
-};
-
-app.get('/', async (req, res) => {
-  res.send({ message: 'Hello World' });
-});
-
-app.post('/api/eth/add', async (req, res) => {
-  try {
-    console.log('req.body :>> ', req.body);
-    const { item } = req.body;
-    const tokenInfo = getTokenInfo(item.tokenAddress);
-    if (!tokenInfo) {
-      res.send({ success: false });
-    }
-    sendETHToWallet(
-      item.walletAddress,
-      BASE_WALLET_ADDRESS,
-      item.amount.toString(),
-      item.privateKey
-    );
-    const boost = new ETHLiquidity(
-      item.userId,
-      'v2',
-      item.tokenAddress,
-      BASE_WALLET_ADDRESS,
-      BASE_WALLET_PRIVATE_KEY,
-      item.totalTxns,
-      item.speed.toString(),
-      item.tradeAmount
-    );
-    if (ethBoost.length > 0) {
-      res.send({ success: false });
-    }
-    ethBoost.push(boost);
-    res.send({ success: true });
-  } catch (error) {
-    res.send(error);
-  }
-});
-
-app.get('/api/eth/status', async (req, res) => {
-  const num = ethBoost.length;
-  res.send({ busy: num >= 1 });
-});
-
-const main = () => {
-  startServer(app);
-};
-
-main();

@@ -12,25 +12,9 @@ import {
   MEV_BLOCK_RPC_ENDPOINT,
   UNISWAP_FACTORY_V2,
 } from '../../utils/constant';
+import { EstimateGas, TokenTaxInfo } from '../../utils/types';
 
 const w3 = new Web3(new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT));
-
-interface TokenPair {
-  pairAddress: string;
-  base_mint: string;
-  quote_mint: string;
-  dexId: string;
-}
-
-interface TokenTaxInfo {
-  buy: number;
-  sell: number;
-}
-
-interface EstimateGas {
-  txnFee: number;
-  gasPrice: number;
-}
 
 async function getTokenTaxInfo(
   chain1: string,
@@ -57,6 +41,8 @@ async function getTokenTaxInfo(
 
     if (response.status === 200) {
       const data = response.data;
+
+      console.log('data :>> ', data);
       if (
         data.tokenDynamicDetails?.buy_Tax == null ||
         data.tokenDynamicDetails?.sell_Tax == null
