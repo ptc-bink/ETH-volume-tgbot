@@ -4,7 +4,7 @@ import {
   get_router_v3_abi,
   get_router_abi,
   get_erc20_abi,
-} from '../../utils/utils'; // import utilities
+} from '../../utils/fetchAbi'; // import utilities
 import {
   MEV_BLOCK_RPC_ENDPOINT,
   WETH_ADDRESS,

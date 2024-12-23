@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { Web3 } from 'web3';
-import { get_factory_v2_abi, get_factory_v3_abi, get_router_abi } from '../../utils/utils';
+import {
+  get_factory_v2_abi,
+  get_factory_v3_abi,
+  get_router_abi,
+} from '../../utils/fetchAbi';
 import {
   PRIMARY_KEY,
   ETHERSCAN_API_KEY,
@@ -26,36 +30,6 @@ interface TokenTaxInfo {
 interface EstimateGas {
   txnFee: number;
   gasPrice: number;
-}
-
-async function getPairAddress(tokenAddress: string): Promise<TokenPair | null> {
-  try {
-    const response = await axios.get(
-      `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
-    );
-    const data = response.data;
-
-    if (!data.pairs || data.pairs.length === 0) {
-      return null;
-    }
-
-    const raydiumPairs = data.pairs.filter(
-      (item: any) => item.quoteToken.address === WETH_ADDRESS
-    );
-
-    if (raydiumPairs.length === 0 || data.pairs[0].chainId !== 'ethereum') {
-      return null;
-    }
-
-    return {
-      pairAddress: raydiumPairs[0].pairAddress,
-      base_mint: raydiumPairs[0].baseToken.address,
-      quote_mint: raydiumPairs[0].quoteToken.address,
-      dexId: 'v2',
-    };
-  } catch (error) {
-    return null;
-  }
 }
 
 async function getTokenTaxInfo(
@@ -105,45 +79,48 @@ async function getTokenTaxInfo(
 // Check if token + ETH pair is existed using Uniswap Factory
 async function getTokenEthPair(tokenAddress: string) {
   const abi = get_factory_v2_abi();
-  const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2)
+  const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2);
 
-  const pair = await factoryContract.methods.getPair(
-    tokenAddress, WETH_ADDRESS
-  ).call();
+  const pair = await factoryContract.methods
+    .getPair(tokenAddress, WETH_ADDRESS)
+    .call();
 
-  console.log('tokenAddress, WETH_ADDRESS :>> ', tokenAddress, WETH_ADDRESS);
-  console.log('pair :>> ', pair);
+  console.log('pair address:>> ', pair);
   if (pair) {
     return true;
-  } else false
+  } else false;
 }
 
 async function getTokenInfo(tokenAddress: string) {
   try {
-    const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`)
+    const response = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
+    );
+    const data = response.data;
 
-    if (response.status == 200) {
-      return response.data;      
-    } else return false
+    if (!data.pairs || data.pairs.length === 0) {
+      return null;
+    }
+    return data.pairs;
   } catch (error) {
-    return false;
+    return null;
   }
 }
 
 // Check if token + ETH pool is existed using Uniswap Factory
 async function getTokenEthPool(tokenAddress: string) {
   const abi = get_factory_v3_abi();
-  const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2)
+  const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2);
 
-  const pair = await factoryContract.methods.getPool(
-    tokenAddress, WETH_ADDRESS
-  ).call();
+  const pair = await factoryContract.methods
+    .getPool(tokenAddress, WETH_ADDRESS)
+    .call();
 
   console.log('tokenAddress, WETH_ADDRESS :>> ', tokenAddress, WETH_ADDRESS);
   console.log('pair :>> ', pair);
   if (pair) {
     return true;
-  } else false
+  } else false;
 }
 
 async function getTokenABI(tokenAddress: string) {
@@ -221,7 +198,6 @@ async function getEstimateConfirmTime(gasPrice: number): Promise<number> {
 }
 
 export {
-  getPairAddress,
   getTokenTaxInfo,
   getTokenABI,
   isWhitelisted,

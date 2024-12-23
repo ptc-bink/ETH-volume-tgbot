@@ -42,10 +42,10 @@ export async function homePage(bot: TelegramBot, message: TelegramBot.Message): 
   const balance = await getWalletBalance(wallet);
 
   const buttons: InlineKeyboardButton[][] = [
-    [{ text: "⭐ 0.2 ETH (Volume: 100 ETH)", callback_data: "select_time_0.2" }],
-    [{ text: "⭐ 0.35 ETH (Volume: 175 ETH)", callback_data: "select_time_0.35" }],
-    [{ text: "⭐ 0.6 ETH (Volume: 300 ETH)", callback_data: "select_time_0.6" }],
-    [{ text: "⭐ 1 ETH (Volume: 500 ETH)", callback_data: "select_time_1" }],
+    [{ text: "⭐ 0.2 ETH (Volume: 100 ETH)", callback_data: "pack_type_0.2" }],
+    [{ text: "⭐ 0.35 ETH (Volume: 175 ETH)", callback_data: "pack_type_0.35" }],
+    [{ text: "⭐ 0.6 ETH (Volume: 300 ETH)", callback_data: "pack_type_0.6" }],
+    [{ text: "⭐ 1 ETH (Volume: 500 ETH)", callback_data: "pack_type_1" }],
     [{ text: "🏧 Withdraw", callback_data: "withdraw" }],
     [{ text: "👈 Return", callback_data: "ethereum" }],
   ];
@@ -70,7 +70,6 @@ export async function homePage(bot: TelegramBot, message: TelegramBot.Message): 
 
 // Function to render the time selection page
 export async function timePage(bot: TelegramBot, message: TelegramBot.Message): Promise<void> {
-  bot.clearReplyListeners();
   const user = await isExistUser(message.chat.id.toString());
   
   if (!user) return;
@@ -79,9 +78,9 @@ export async function timePage(bot: TelegramBot, message: TelegramBot.Message): 
   const balance = await getWalletBalance(wallet);
 
   const buttons: InlineKeyboardButton[][] = [
-    [{ text: "⚡⚡⚡ Fast Mode 8 hours", callback_data: "token_address_6" }],
-    [{ text: "⚡⚡ Normal Mode 24 hours", callback_data: "token_address_27" }],
-    [{ text: "⚡ Steady Mode 7 days", callback_data: "token_address_7" }],
+    [{ text: "⚡⚡⚡ Fast Mode 8 hours", callback_data: "select_time_6" }],
+    [{ text: "⚡⚡ Normal Mode 24 hours", callback_data: "select_time_27" }],
+    [{ text: "⚡ Steady Mode 7 days", callback_data: "select_time_7" }],
   ];
   const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
 

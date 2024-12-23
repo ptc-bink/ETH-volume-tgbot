@@ -1,7 +1,7 @@
 import { setTimeout } from 'timers';
 import express from 'express';
 import { ETHLiquidity } from './chain/ether/ETHLiquidity';
-import { getPairAddress } from './chain/ether/utils';
+import { getTokenInfo } from './chain/ether/utils';
 import { sendETHToWallet } from './chain/ether/wallet';
 import { BASE_WALLET_ADDRESS, BASE_WALLET_PRIVATE_KEY } from './utils/constant';
 import { saveNewWallet } from './db/helper';
@@ -112,8 +112,8 @@ app.post('/api/eth/add', async (req, res) => {
   try {
     console.log('req.body :>> ', req.body);
     const { item } = req.body;
-    const pair = getPairAddress(item.tokenAddress);
-    if (!pair) {
+    const tokenInfo = getTokenInfo(item.tokenAddress);
+    if (!tokenInfo) {
       res.send({ success: false });
     }
     sendETHToWallet(
@@ -138,14 +138,14 @@ app.post('/api/eth/add', async (req, res) => {
     ethBoost.push(boost);
     res.send({ success: true });
   } catch (error) {
-    res.send(error)
+    res.send(error);
   }
 });
 
-app.get('/api/eth/status', async(req, res) =>{
+app.get('/api/eth/status', async (req, res) => {
   const num = ethBoost.length;
   res.send({ busy: num >= 1 });
-})
+});
 
 const main = () => {
   startServer(app);

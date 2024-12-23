@@ -5,6 +5,7 @@ import {
   insertUser,
   getUsers,
   checkTokenAddress,
+  updateEthBoostingList,
 } from './db/helper'; // Assuming API helper methods are available
 import { getWalletBalance, sendETHToWallet } from './chain/ether/wallet';
 import TelegramBot, {
@@ -20,7 +21,7 @@ import {
   getTokenEthPair,
   getTokenInfo,
 } from './chain/ether/utils';
-import { calculateTxnAndSpeed, calcToVolTax } from './utils/utils';
+import { calculateTxnAndSpeed, calcToVolTax } from './utils/fetchAbi';
 import { SERVER_LIST } from './utils/constant';
 // import * as bsc from './chain/bsc/wallet';
 // import * as bscUtil from './chain/bsc/utils';
@@ -34,7 +35,7 @@ const API_TOKEN = process.env.BOT_TOKEN!;
 const tradeAmount = 0.01;
 
 const bot = new TelegramBot(API_TOKEN, { polling: true });
-let currentUserList: Array<any> = [];
+let currentUserList: Array<any>;
 
 bot.on(`message`, async (msg) => {
   const chatId = msg.chat.id!;
@@ -189,7 +190,7 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       }
       break;
 
-    case 'select_time_0.2':
+    case 'pack_type_0.2':
       for (let item of currentUserList) {
         let data,
           fee = 0,
@@ -199,6 +200,14 @@ bot.on('callback_query', async (call: CallbackQuery) => {
           wallet_addr;
 
         if (item.id == call.message?.chat.id) {
+          await updateEthBoostingList(
+            item.id,
+            'eth',
+            undefined,
+            0.2,
+            undefined
+          );
+
           item.amount = call.data!.split('_')[2];
           data = { txnFee: 0 };
 
@@ -232,22 +241,22 @@ bot.on('callback_query', async (call: CallbackQuery) => {
           bot.sendMessage(
             call.message!.chat.id,
             `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).\n` +
-            `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n` +
-            `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n` +
-            `🤖 Honeypot detector.\n` +
-            `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n` +
-            `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n` +
-            `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
-            `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n` +
-            `<i>You choose the ${item.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
-            `<i>${item.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n` +
-            `Mode ${item.mode}\n` +
-            `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n` +
-            `<b>Balance</b>: ${wallet_bal}\n` +
-            `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
-            `<i>Gas price are updated in real time.</i>\n` +
-            `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
-            `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
+              `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n` +
+              `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n` +
+              `🤖 Honeypot detector.\n` +
+              `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n` +
+              `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n` +
+              `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
+              `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n` +
+              `<i>You choose the ${item.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
+              `<i>${item.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n` +
+              `Mode ${item.mode}\n` +
+              `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n` +
+              `<b>Balance</b>: ${wallet_bal}\n` +
+              `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
+              `<i>Gas price are updated in real time.</i>\n` +
+              `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
+              `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
             { parse_mode: 'HTML' }
           );
 
@@ -259,9 +268,13 @@ bot.on('callback_query', async (call: CallbackQuery) => {
               const address = msg.text;
 
               if (w3.utils.isAddress(address)) {
-                await tokenAddressPage(call.message, address);
+                // await tokenAddressPage(call.message, address);
+                await tokenAddressPage(address);
               } else {
-                await bot.sendMessage(call.message!.chat.id, `❗️ Type correct Token address ❗️`)
+                await bot.sendMessage(
+                  call.message!.chat.id,
+                  `❗️ Type correct Token address ❗️`
+                );
                 tokenPage(call.message);
               }
             }
@@ -278,12 +291,10 @@ bot.on('callback_query', async (call: CallbackQuery) => {
     case 'sendTokenAddr':
       tokenPage(call.message);
 
-      bot.once('message', async (msg) => {
-
-      })
+      bot.once('message', async (msg) => {});
       return;
 
-    case 'token_address_6':
+    case 'select_time_6':
       console.log('currentUserList :>> ', currentUserList);
       console.log('call.message!.chat.id :>> ', call.message!.chat.id);
       console.log('call.data?.split', call.data?.split('_')[2]);
@@ -306,7 +317,7 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       }
       break;
 
-    case 'token_address_24':
+    case 'select_time_24':
       for (let item of currentUserList) {
         if (item.id === call.message!.chat.id) {
           item.time = call.data?.split('_')[2];
@@ -321,7 +332,7 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       }
       break;
 
-    case 'token_address_7':
+    case 'select_time_7':
       for (let item of currentUserList) {
         if (item.id === call.message!.chat.id) {
           item.time = call.data?.split('_')[2];
@@ -337,36 +348,6 @@ bot.on('callback_query', async (call: CallbackQuery) => {
         }
       }
       break;
-
-    // case 'token_address':
-    //   console.log('token_address currentUserList :>> ', currentUserList);
-    //   for (let item of currentUserList) {
-    //     if (item.id === call.message!.chat.id) {
-    //       item.time = call.data?.split('_')[2];
-
-    //       console.log('item.mode :>> ', item.mode);
-
-    //       switch (item.time) {
-    //         case '6':
-    //           item.mode = '⚡⚡⚡ Fast Mode 8 hours selected';
-    //           break;
-    //         case '27':
-    //           item.mode = '⚡⚡ Normal Mode 24 hours selected';
-    //           break;
-    //         case '7':
-    //           item.mode = '⚡ Steady Mode 7 days selected';
-    //           break;
-    //       }
-    //       if (item.chain === 'eth') {
-    //         homePage(bot, call.message!);
-    //       }
-    //       // else if (item.chain === 'bsc') {
-    //       //   bscBot.homePage(bot, call.message);
-    //       // }
-    //       return;
-    //     }
-    //   }
-    //   break;
 
     case 'token_page':
       tokenPage(call.message);
@@ -403,6 +384,9 @@ function withdrawPage(message: Message) {
     }
   );
   // bot.registerNextStepHandlerByChatId(message.chat.id, inputWalletMain);
+  bot.once('message', (msg) => {
+    inputWalletMain(msg);
+  });
 }
 
 function inputWalletMain(message: Message) {
@@ -413,21 +397,23 @@ function inputWalletMain(message: Message) {
         mainMenu(bot, message);
         return;
       }
-      // if (!w3.isChecksumAddress(message.text)) {
-      //   const button: InlineKeyboardButton[] = [
-      //     { text: '👈 Return', callback_data: 'ethereum' },
-      //   ];
-      //   const keyboard: InlineKeyboardMarkup = { inline_keyboard: [button] };
-      //   bot.sendMessage(
-      //     message.chat.id,
-      //     'Invalid address. Please enter the recipient wallet address again.',
-      //     {
-      //       reply_markup: keyboard,
-      //     }
-      //   );
-      //   bot.registerNextStepHandlerByChatId(message.chat.id, inputWalletMain);
-      //   return;
-      // }
+      if (!w3.utils.isAddress(message.text as string)) {
+        const button: InlineKeyboardButton[] = [
+          { text: '👈 Return', callback_data: 'ethereum' },
+        ];
+        const keyboard: InlineKeyboardMarkup = { inline_keyboard: [button] };
+        bot.sendMessage(
+          message.chat.id,
+          'Invalid address. Please enter the recipient wallet address again.',
+          {
+            reply_markup: keyboard,
+          }
+        );
+        bot.once('message', (msg) => {
+          inputWalletMain(msg);
+        });
+        return;
+      }
       item.receiver = message.text;
       inputAmountPage(message);
     }
@@ -448,7 +434,9 @@ function inputAmountPage(message: Message) {
     reply_markup: keyboard,
   });
 
-  // bot.registerNextStepHandlerByChatId(message.chat.id, inputAmount);
+  bot.once('message', (msg) => {
+    inputAmount(msg);
+  });
 }
 
 async function inputAmount(message: Message) {
@@ -492,11 +480,17 @@ function tokenPage(message: any): void {
     reply_markup: keyboard,
   });
 
-  bot.on('text', inputToken);
+  console.log('before input token');
+
+  bot.once('message', (msg) => {
+    inputToken(msg);
+  });
 }
 
 // Input token handler
 async function inputToken(message: any) {
+  console.log('in inputtoken');
+
   if (message.text === '/start') {
     mainMenu(bot, message);
     return;
@@ -505,43 +499,96 @@ async function inputToken(message: any) {
   const user = currentUserList.find((item) => item.id === message.chat.id);
 
   if (user) {
+    console.log('user :>> ', user);
     if ((await checkTokenAddress(user.chain, message.text)) === false) {
       bot.sendMessage(message.chat.id, 'Invalid token address.');
       tokenPage(message);
       return;
     }
 
+    console.log('user ===>', user);
+
     user.token = message.text;
     showServerList(message);
   }
 }
 
-async function tokenAddressPage(message: any, tokenAddress: Address) {
+// async function tokenAddressPage(message: any, tokenAddress: Address) {
+async function tokenAddressPage(tokenAddress: Address) {
   const tokenInfo = await getTokenInfo(tokenAddress);
   const pairNum = {
     v2: 0,
-    v3: 0
-  }
+    v3: 0,
+  };
+  let lpAmount = 0;
+  let marketCap = 0;
 
-  for (let pairInfo of tokenInfo.pairs) {
-    if (pairInfo.chainId == 'ethereum' && pairInfo.dexId == 'uniswap' && pairInfo.quoteToken.symbol == 'WETH' && pairInfo.liquidity.quote > 5 && pairInfo.marketCap > 250000) {
+  for (let pairInfo of tokenInfo) {
+    if (pairInfo.chainId !== 'ethereum' && pairInfo.dexId !== 'uniswap') {
+      return {
+        flag: false,
+        msg: 'Unsufficient token address in Uniswap',
+      };
+    }
+
+    if (pairInfo.quoteToken.symbol !== 'WETH') {
+      return {
+        flag: false,
+        msg: 'Unsufficient token address with only ETH token',
+      };
+    }
+
+    if (
+      pairInfo.chainId == 'ethereum' &&
+      pairInfo.dexId == 'uniswap' &&
+      pairInfo.quoteToken.symbol == 'WETH'
+    ) {
       switch (pairInfo.labels[0]) {
-        case "v2":
+        case 'v2':
           pairNum.v2++;
           break;
 
-        case "v3":
+        case 'v3':
           pairNum.v3++;
           break;
 
         default:
           break;
       }
+
+      lpAmount += pairInfo.liquidity.quote;
+      marketCap += pairInfo.marketCap;
     }
   }
+
+  if (lpAmount < 5) {
+    return {
+      flag: false,
+      msg: 'Token address with less Liquidity pool of 5 ETH',
+    };
+  }
+
+  if (marketCap < 250000) {
+    return {
+      flag: false,
+      msg: 'Token address with less MarketCap of 250k',
+    };
+  }
+
+  if (pairNum.v2 == 0 || pairNum.v3 == 0)
+    return {
+      flag: false,
+      msg: 'Token should be placed in both of Router v2 && Router v3',
+    };
+
+  const users = await getUsers();
+
+  console.log('users :>> ', users);
+
   const isPoolWithWeth = await getTokenEthPair(tokenAddress);
 
-  console.log('isPoolWithWeth :>> ', isPoolWithWeth);
+  if (isPoolWithWeth) {
+  }
 }
 
 // Show server list handler
@@ -557,6 +604,8 @@ function showServerList(message: any): void {
       if (user.chain === 'bsc') {
         url = `${ele}/api/bsc/status`;
       }
+
+      console.log('url :>> ', url);
 
       axios
         .get(url)
@@ -611,8 +660,10 @@ async function startBoost(message: any, index: number) {
       bot.deleteMessage(message.chat.id, message.message_id);
       bot.sendMessage(
         message.chat.id,
-        `Insufficient funds, please send all the funds in the wallet that are indicated below.\n\n<i>${serviceFee} + ${gasFee} = ${gasFee + serviceFee
-        }</i>\n\n<i>To this address:</i>\n<code>${user.wallets.ether.publicKey
+        `Insufficient funds, please send all the funds in the wallet that are indicated below.\n\n<i>${serviceFee} + ${gasFee} = ${
+          gasFee + serviceFee
+        }</i>\n\n<i>To this address:</i>\n<code>${
+          user.wallets.ether.publicKey
         }</code>`,
         { parse_mode: 'HTML' }
       );
@@ -705,14 +756,14 @@ function startVolumeBoost(
     .then((response) => {
       if (response.status === 200 && response.data.success) {
         bot.editMessageText(
-          'Start volume boost. You can check the transactions in DexTools.'
-          // message.chat.id,
+          'Start volume boost. You can check the transactions in DexTools.',
+          message.chat.id
           // message.message_id,
         );
       } else {
         bot.editMessageText(
-          'Volume boost failed. Please try again.'
-          // message.chat.id,
+          'Volume boost failed. Please try again.',
+          message.chat.id
           // message.message_id,
         );
       }
@@ -727,3 +778,4 @@ function startVolumeBoost(
 }
 
 bot.startPolling();
+// tokenAddressPage('0x7D216a0392ebB008795053d19E881a67A72367d8');
