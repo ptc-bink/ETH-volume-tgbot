@@ -48,7 +48,7 @@ interface EthItem {
 
 const processEthereum = async () => {
   while (eventEth) {
-    for (let item of [...ethBoost]) {
+    for (let item of ethBoost) {
       try {
         console.log('item: ', item.isBoost);
         item.calcTime += 1;

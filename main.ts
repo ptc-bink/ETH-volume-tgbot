@@ -184,22 +184,22 @@ bot.on('callback_query', async (call: CallbackQuery) => {
         await bot.sendMessage(
           call.message!.chat.id,
           `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).\n` +
-            `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n` +
-            `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n` +
-            `🤖 Honeypot detector.\n` +
-            `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n` +
-            `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n` +
-            `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
-            `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n` +
-            `<i>You choose the ${currentUser.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
-            `<i>${currentUser.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n` +
-            `Mode ${currentUser.mode}\n` +
-            `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n` +
-            `<b>Balance</b>: ${wallet_bal}\n` +
-            `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
-            `<i>Gas price are updated in real time.</i>\n` +
-            `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
-            `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
+          `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n` +
+          `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n` +
+          `🤖 Honeypot detector.\n` +
+          `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n` +
+          `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n` +
+          `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
+          `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n` +
+          `<i>You choose the ${currentUser.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
+          `<i>${currentUser.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n` +
+          `Mode ${currentUser.mode}\n` +
+          `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n` +
+          `<b>Balance</b>: ${wallet_bal}\n` +
+          `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
+          `<i>Gas price are updated in real time.</i>\n` +
+          `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
+          `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
           { parse_mode: 'HTML' }
         );
 
@@ -231,7 +231,7 @@ bot.on('callback_query', async (call: CallbackQuery) => {
     case 'sendTokenAddr':
       await tokenPage(call.message);
 
-      bot.once('message', async (msg) => {});
+      bot.once('message', async (msg) => { });
       break;
 
     case 'select_time_6':
@@ -272,11 +272,10 @@ bot.on('callback_query', async (call: CallbackQuery) => {
 connectMongoDB(MongoDbURL as string);
 console.log('MongoDB connected ❤❤❤');
 
-bot.startPolling();
-console.log('Bot started ❤❤❤');
+// bot.startPolling();
+// console.log('Bot started ❤❤❤');
 
 // tokenAddressPage('0x7D216a0392ebB008795053d19E881a67A72367d8');
-
 // cron.schedule("*/1 * * *", async() => {
 //   console.log("running a task every 1 minute ❤❤❤");
 
