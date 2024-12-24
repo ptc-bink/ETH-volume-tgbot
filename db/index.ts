@@ -55,6 +55,45 @@ export async function updateUserReceiver(
   }
 }
 
+export async function updateUserMode(userId: string, mode: string): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { mode: mode }
+    )
+
+    return user
+  } catch (error) {
+    return error
+  }
+}
+
+export async function updateUserAmount(userId: string, amount: number): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { amount: amount }
+    )
+
+    return user
+  } catch (error) {
+    return error
+  }
+}
+
+export async function updateUserTime(userId: string, time: number): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { time: time }
+    )
+
+    return user
+  } catch (error) {
+    return error
+  }
+}
+
 export async function updateUserFee(userId: string, fee: number): Promise<any> {
   try {
     const user = await UsersModal.findOneAndUpdate(
@@ -68,7 +107,6 @@ export async function updateUserFee(userId: string, fee: number): Promise<any> {
   }
 }
 
-// Insert a new user
 export async function insertUser(userId: string): Promise<any> {
   try {
     // const userDB = getUserDB();
@@ -92,14 +130,13 @@ export async function insertUser(userId: string): Promise<any> {
 
     await newUser.save();
 
-    const users = await UsersModal.findOne({ id: userId });
-    return users;
+    const user = await UsersModal.findOne({ id: userId });
+    return user;
   } catch {
     return [];
   }
 }
 
-// Get all user
 export async function getUser(userId: string): Promise<any> {
   try {
     if (await isExistUser(userId)) {
@@ -114,14 +151,45 @@ export async function getUser(userId: string): Promise<any> {
   }
 }
 
-// Get all users
-export async function getUsers(): Promise<any[]> {
+export async function getUsers(): Promise<any[] | undefined> {
   try {
     const users = await UsersModal.find();
 
     return users;
   } catch {
-    return [];
+    return undefined;
+  }
+}
+
+export async function addBoosting(
+  userId: string,
+  tokenAddress: string,
+  walletAddress: string,
+  privateKey: string,
+  totalTxns: number,
+  speed: number,
+  serviceFee: number,
+  amount: number,
+  tradeAmount: number,
+): Promise<any> {
+  try {
+    const newBoosting = await new BoostingListModal({
+      userId: userId,
+      tokenAddress: tokenAddress,
+      walletAddress: walletAddress,
+      privateKey: privateKey,
+      totalTxns: totalTxns,
+      speed: speed,
+      serviceFee: serviceFee,
+      amount: amount,
+      tradeAmount: tradeAmount
+    }).save();
+
+    const boost = BoostingListModal.findOne({ id: userId });
+
+    return boost;
+  } catch (error) {
+    return undefined
   }
 }
 
@@ -156,7 +224,7 @@ export async function updateEthBoostingList(
     );
 
     return await BoostingListModal.findOne({ id: userId });
-  } catch (error) {}
+  } catch (error) { }
 }
 
 // Change chain preference for a user
@@ -165,7 +233,6 @@ export async function changeChain(
   chain: string
 ): Promise<any | false> {
   try {
-    // const userDB = getUserDB();
     const user = await UsersModal.findOne({ id: userId });
     if (!user) return false;
 
