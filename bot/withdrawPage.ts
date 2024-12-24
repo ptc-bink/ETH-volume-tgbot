@@ -4,7 +4,7 @@ import {
   Message,
 } from 'node-telegram-bot-api';
 import { bot } from '../main';
-import { mainMenu, w3 } from './utils';
+import { mainMenu, w3 } from '.';
 import { getWalletBalance } from '../chain/ether/wallet';
 import { getUser, updateUserReceiver } from '../db';
 
@@ -61,7 +61,6 @@ export async function inputAmountPage(message: Message, currentUser: any) {
 
 export async function inputAmount(message: Message, currentUser: any) {
   if (currentUser.id === message.chat.id) {
-    // bot.clearStepHandlerByChatId(message.chat.id);
     if (message.text === '/start') {
       await mainMenu(bot, message);
       return;

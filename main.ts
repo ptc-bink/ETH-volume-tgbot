@@ -31,7 +31,9 @@ import {
   selectTimePage,
   startBoost,
   tokenAddressPage,
-} from './bot/utils';
+  packTypePage,
+  startPage,
+} from './bot';
 import { inputAmountPage } from './bot/withdrawPage';
 import { inputToken, tokenPage } from './bot/tokenPage';
 import { addEthStatus } from './boost';
@@ -63,10 +65,7 @@ bot.on('callback_query', async (call: CallbackQuery) => {
 
   switch (call.data!) {
     case 'ethereum':
-      if (currentUser.id === call.message!.chat.id.toString()) {
-        currentUser.chain = 'eth';
-        await timePage(bot, call.message!);
-      }
+      await startPage(call.message!, 'eth');
       break;
 
     case 'solana':
@@ -122,7 +121,6 @@ bot.on('callback_query', async (call: CallbackQuery) => {
 
     case 'delete':
       await bot.deleteMessage(call.message!.chat.id, call.message!.message_id);
-      // bot.clearStepHandlerByChatId(call.message!.chat.id);
       break;
 
     case 'input_amount':
@@ -134,116 +132,39 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       break;
 
     case 'pack_type_0.2':
-      let data,
-        fee = 0,
-        bal,
-        wallet_bal = 0,
-        symbol,
-        wallet_addr;
+      await packTypePage(call.message!, 0.2)
+      break;
 
-      if (currentUser.id == call.message?.chat.id) {
-        await updateEthBoostingList(
-          currentUser.id,
-          'eth',
-          undefined,
-          0.2,
-          undefined
-        );
+    case 'pack_type_0.35':
+      await packTypePage(call.message!, 0.35)
+      break;
 
-        currentUser.amount = call.data!.split('_')[2];
-        data = { txnFee: 0 };
+    case 'pack_type_0.6':
+      await packTypePage(call.message!, 0.6)
+      break;
 
-        if (currentUser.chain == 'eth') data = await getEstimateGas();
-        // if (currentUser.chain == 'bsc')
-        // data = bsc_util.getEstimateGas()
-        fee = data.txnFee;
-
-        if (currentUser.amount == 0.2) fee = parseFloat((fee * 100).toFixed(4));
-        if (currentUser.amount == 0.35)
-          fee = parseFloat((fee * 175).toFixed(4));
-        if (currentUser.amount == 0.6) fee = parseFloat((fee * 300).toFixed(4));
-        if (currentUser.amount == 1) fee = parseFloat((fee * 500).toFixed(4));
-
-        const amount = (parseFloat(currentUser.amount) + fee).toFixed(3);
-
-        await updateUserFee(currentUser.id, fee);
-
-        if (currentUser.chain == 'eth') {
-          bal = await getWalletBalance(currentUser.wallets.ether.publicKey);
-          wallet_bal = parseFloat(bal.eth);
-          symbol = 'ETH';
-          wallet_addr = currentUser.wallets.ether.publicKey;
-        }
-        // if (currentUser.chain == 'bsc') {
-        //   bal = bsc.getWalletBalance(currentUser['wallets']['ether']['publicKey']);
-        //   wallet_bal = bal['bnb'];
-        //   symbol = 'BNB';
-        //   wallet_addr = currentUser['wallets']['ether']['publicKey'];
-        // }
-
-        await bot.sendMessage(
-          call.message!.chat.id,
-          `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).\n` +
-          `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n` +
-          `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n` +
-          `🤖 Honeypot detector.\n` +
-          `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n` +
-          `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n` +
-          `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
-          `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n` +
-          `<i>You choose the ${currentUser.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
-          `<i>${currentUser.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n` +
-          `Mode ${currentUser.mode}\n` +
-          `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n` +
-          `<b>Balance</b>: ${wallet_bal}\n` +
-          `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
-          `<i>Gas price are updated in real time.</i>\n` +
-          `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n` +
-          `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
-          { parse_mode: 'HTML' }
-        );
-
-        await tokenPage(call.message);
-
-        // bot.once(`message`, async (msg) => {
-        //   if (msg.text) {
-        //     const address = msg.text;
-
-        //     if (w3.utils.isAddress(address)) {
-        //       // await tokenAddressPage(call.message, address);
-        //       await tokenAddressPage(address);
-        //     } else {
-        //       await bot.sendMessage(
-        //         call.message!.chat.id,
-        //         `❗️ Type correct Token address ❗️`
-        //       );
-        //       await tokenPage(call.message);
-        //     }
-        //   }
-        // });
-      }
+    case 'pack_type_1':
+      await packTypePage(call.message!, 1)
       break;
 
     case 'time_page':
-      await homePage(bot, call.message!);
+      await homePage(call.message!);
       break;
 
     case 'sendTokenAddr':
       await tokenPage(call.message);
-
-      bot.once('message', async (msg) => { });
       break;
 
     case 'select_time_6':
-      currentUser = await selectTimePage(call, currentUser, 6);
+      await selectTimePage(call.message!, 6);
       break;
 
     case 'select_time_24':
-      currentUser = await selectTimePage(call, currentUser, 24);
+      await selectTimePage(call.message!, 24);
       break;
 
     case 'select_time_7':
-      currentUser = await selectTimePage(call, currentUser, 7);
+      await selectTimePage(call.message!, 7);
       break;
 
     case 'token_page':
