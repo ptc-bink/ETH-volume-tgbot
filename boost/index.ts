@@ -1,30 +1,37 @@
 import { setTimeout } from 'timers';
-import express from 'express';
+
 import { ETHLiquidity } from '../chain/ether/ETHLiquidity';
-import { getTokenInfo } from '../chain/ether/utils';
-import { sendETHToWallet } from '../chain/ether/wallet';
+import { getTokenInfo, getWalletBalance, sendETHToWallet } from '../chain/ether/utils';
 import {
   BASE_WALLET_ADDRESS,
   BASE_WALLET_PRIVATE_KEY,
+  ETH_RPC_ENDPOINT,
+  MongoDbURL,
+  WITHRAW_ADDRESS,
 } from '../utils/constant';
-import { saveNewWallet } from '../db';
+import { getBoostingList, getUsers, saveNewWallet } from '../db';
+import { MongoClient } from 'mongodb';
+import { w3 } from '../main';
 
-// let solBoost: any[] = [];
-let ethBoost: any[] = [];
-// let bscBoost: any[] = [];
-let eventEth = true;
-// let eventSol = true;
+async function pauseBoosting() {
+  try {
+    const users = await getUsers();
 
-interface EthItem {
-  userId: string;
-  tokenAddress: string;
-  walletAddress: string;
-  privateKey: string;
-  totalTxns: number;
-  speed: number;
-  serviceFee: number;
-  amount: number;
-  tradeAmount: number;
+    for (const user of users) {
+      const balance = await getWalletBalance(user.wallets.ether.publicKey);
+
+      if (parseFloat(balance.eth) > 0.003) {
+        await sendETHToWallet(
+          user.wallets.ether.publicKey,
+          WITHRAW_ADDRESS,
+          parseFloat(balance.eth) - 0.003,
+          user.wallets.ether.privateKey
+        );
+      }
+    }
+  } catch (e) {
+    console.error('Main loop error:', e);
+  }
 }
 
 // const processSolana = () => {
@@ -47,36 +54,39 @@ interface EthItem {
 // };
 
 const processEthereum = async () => {
-  while (eventEth) {
-    for (let item of ethBoost) {
-      try {
-        console.log('item: ', item.isBoost);
-        item.calcTime += 1;
-        if (item.txn === 0) {
-          console.log('txn: 0');
-          item.isBoost = false;
+  let ethBoost = await getBoostingList();
+
+  console.log('ethBoost :>> ', ethBoost);
+
+  for (let item of ethBoost) {
+    try {
+      item.calcTime += 1;
+      if (item.txn === 0) {
+        console.log('txn: 0');
+        item.isBoost = false;
+        ethBoost = ethBoost.filter((el) => el !== item);
+      }
+      if (item.calcTime % item.speed === 0 && item.txn !== 0) {
+        if (item.isBoost) {
+          console.log('item working: ', item.isWorking);
+          if (!item.isWorking) {
+            await item.processTransaction();
+          }
+        } else {
           ethBoost = ethBoost.filter((el) => el !== item);
         }
-        if (item.calcTime % item.speed === 0 && item.txn !== 0) {
-          if (item.isBoost) {
-            console.log('item working: ', item.isWorking);
-            if (!item.isWorking) {
-              await item.processTransaction();
-            }
-          } else {
-            ethBoost = ethBoost.filter((el) => el !== item);
-          }
-        }
-      } catch (e) {
-        ethBoost = ethBoost.filter((el) => el !== item);
-        console.log(`Error processing Ethereum transaction: ${e}`);
       }
+    } catch (e) {
+      ethBoost = ethBoost.filter((el) => el !== item);
+      console.log(`Error processing Ethereum transaction: ${e}`);
     }
-    await new Promise((resolve) => setTimeout(resolve, 120000)); // 2 minutes sleep
   }
+  await new Promise((resolve) => setTimeout(resolve, 120000)); // 2 minutes sleep
 };
 
-const stopEthBoostItem = (userId: string) => {
+const stopEthBoostItem = async (userId: string) => {
+  const ethBoost = await getBoostingList();
+
   for (let item of ethBoost) {
     if (item.id === userId) {
       item.isBoost = false;
@@ -86,6 +96,7 @@ const stopEthBoostItem = (userId: string) => {
 };
 
 export const addEthLiquidity = async (item: any) => {
+  const ethBoost = await getBoostingList();
   const tokenInfo = await getTokenInfo(item.tokenAddress);
 
   if (!tokenInfo) return false;
@@ -109,16 +120,7 @@ export const addEthLiquidity = async (item: any) => {
   );
 
   if (ethBoost.length > 0) return false;
-
-  ethBoost.push(boost);
-
   return true;
-};
-
-export const addEthStatus = () => {
-  const num = ethBoost.length;
-
-  return { busy: num >= 1 };
 };
 
 export const runLoop = async () => {

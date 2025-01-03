@@ -11,10 +11,15 @@ import {
   WETH_ADDRESS,
   MEV_BLOCK_RPC_ENDPOINT,
   UNISWAP_FACTORY_V2,
+  ETH_RPC_ENDPOINT,
 } from '../../utils/constant';
 import { EstimateGas, TokenTaxInfo } from '../../utils/types';
+import { ethers } from 'ethers';
+import { w3 } from '../../main';
 
-const w3 = new Web3(new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT));
+const headers = {
+  "Content-Type": "application/json"
+};
 
 async function getTokenTaxInfo(
   chain1: string,
@@ -62,7 +67,62 @@ async function getTokenTaxInfo(
   }
 }
 
-// Check if token + ETH pair is existed using Uniswap Factory
+async function sendETHToWallet(
+  sender: string,
+  receiver: string,
+  amount: number,
+  priv_key: string
+) {
+  try {
+    const from_addr = ethers.getAddress(sender);
+    const to_addr = ethers.getAddress(receiver);
+
+    const nonce = await w3.eth.getTransactionCount(from_addr);
+
+    const tx = {
+      nonce: Number(nonce),
+      to: to_addr,
+      value: ethers.parseUnits(amount.toString(), 'ether'),
+      gasLimit: 21000,
+      gasPrice:
+        ethers.parseUnits('40', 'gwei') + ethers.parseUnits('2', 'gwei'),
+      chainId: 1,
+    };
+
+    const wallet = new ethers.Wallet(priv_key);
+    const signed_tx = await wallet.signTransaction(tx);
+
+    const data = {
+      jsonrpc: '2.0',
+      method: 'eth_sendRawTransaction',
+      params: [signed_tx],
+      id: 1,
+    };
+
+    const response = await axios.post(ETH_RPC_ENDPOINT, JSON.stringify(data), {
+      headers,
+    });
+    if (response.status !== 200) {
+      return null;
+    }
+    const tx_hash = response.data.result;
+
+    // const tx_receipt = await w3.eth.trans(tx_hash, 1200);
+    return tx_hash;
+  } catch (e) {
+    console.error(`sendETHToWallet error: ${e}`);
+    return null;
+  }
+}
+
+async function getWalletBalance(address: string) {
+  const balance_wei = await w3.eth.getBalance(address);
+  return {
+    eth: ethers.formatUnits(balance_wei, 'ether'),
+    wei: balance_wei,
+  };
+}
+
 async function getTokenEthPair(tokenAddress: string) {
   const abi = get_factory_v2_abi();
   const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2);
@@ -93,7 +153,6 @@ async function getTokenInfo(tokenAddress: string) {
   }
 }
 
-// Check if token + ETH pool is existed using Uniswap Factory
 async function getTokenEthPool(tokenAddress: string) {
   const abi = get_factory_v3_abi();
   const factoryContract = new w3.eth.Contract(abi, UNISWAP_FACTORY_V2);
@@ -155,6 +214,17 @@ async function isWhitelisted(
   }
 }
 
+function createNewEthereumWallet() {
+  const wallet = ethers.Wallet.createRandom();
+  const mnemonic = wallet.mnemonic!.phrase;
+
+  return {
+      privateKey: wallet.privateKey,
+      publicKey: wallet.address,
+      mnemonic: mnemonic
+  };
+}
+
 async function getEstimateGas(): Promise<EstimateGas> {
   const gasPrice = await w3.eth.getGasPrice();
   const gas = 300000;
@@ -190,5 +260,8 @@ export {
   getTokenInfo,
   getEstimateGas,
   getTokenEthPair,
+  getWalletBalance,
+  sendETHToWallet,
+  createNewEthereumWallet,
   getEstimateConfirmTime,
 };

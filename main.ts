@@ -5,6 +5,7 @@ import {
   Message,
   CallbackQuery,
 } from 'node-telegram-bot-api';
+import cron from "node-cron";
 
 import {
   isExistUser,
@@ -13,9 +14,9 @@ import {
   checkTokenAddress,
   updateEthBoostingList,
   updateUserFee,
+  getBoostingList,
 } from './db'; // Assuming API helper methods are available
-import { getWalletBalance, sendETHToWallet } from './chain/ether/wallet';
-import { API_TOKEN, MongoDbURL } from './utils/constant';
+import { API_TOKEN, MEV_BLOCK_RPC_ENDPOINT, MongoDbURL } from './utils/constant';
 import { connectMongoDB } from './utils/db';
 import { getEstimateGas } from './chain/ether/utils';
 // import * as bsc from './chain/bsc/wallet';
@@ -25,18 +26,19 @@ import {
   homePage,
   timePage,
   mainMenu,
-  w3,
   confirmPage,
   selectTimePage,
   startBoost,
-  tokenAddressPage,
   packTypePage,
   startPage,
+  allWithdrawPage,
 } from './bot';
 import { inputAmountPage, withdrawPage } from './bot/withdrawPage';
 import { inputToken, tokenPage } from './bot/tokenPage';
-import { addEthStatus } from './boost';
+import { runLoop } from './boost';
+import Web3 from 'web3';
 
+export const w3 = new Web3(new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT));
 export const bot = new TelegramBot(API_TOKEN, { polling: true });
 
 bot.on(`message`, async (msg) => {
@@ -68,62 +70,27 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       break;
 
     case 'solana':
+      await startPage(call.message!, 'sol');
       return;
 
     case 'bsc':
+      await startPage(call.message!, 'bsc');
       break;
 
-    // case 'all':
-    //   // bot.clearStepHandlerByChatId(call.message!.chat.id);
-    //   for (let item of currentUserList) {
-    //     if (item.id === call.message!.chat.id) {
-    //       let balance = 0;
-    //       let symbol = '';
-    //       let bal: any;
-    //       if (item.chain === 'eth') {
-    //         const bal = await getWalletBalance(item.wallets.ether.publicKey);
-    //         balance = parseFloat(bal.eth);
-    //         symbol = 'ETH';
-    //       }
-    //       // if (item.chain === 'bsc') {
-    //       //   const bal = bsc.getWalletBalance(item.wallets.ether.publicKey);
-    //       //   balance = bal.bsc;
-    //       //   symbol = 'BNB';
-    //       // }
-    //       if (parseFloat(bal.eth) - 0.003 <= 0) {
-    //         bot.sendMessage(call.message!.chat.id, 'Insufficient funds');
-    //         homePage(bot, call.message!);
-    //         return;
-    //       }
-    //       item.withdrawAmount = balance - 0.003;
-    //       const buttons: InlineKeyboardButton[][] = [
-    //         [{ text: '✅ Confirm', callback_data: 'confirm' }],
-    //         [{ text: '👈 Return', callback_data: 'input_amount' }],
-    //       ];
-    //       const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
-    //       bot.sendMessage(
-    //         call.message!.chat.id,
-    //         `<b>Recipient Address</b>\n${item.receiver}\n\n<b>Amount</b>\n${balance} ${symbol}`,
-    //         {
-    //           reply_markup: keyboard,
-    //           parse_mode: 'HTML',
-    //         }
-    //       );
-    //       return;
-    //     }
-    //   }
-    //   break;
+    case 'all':
+      await allWithdrawPage(call.message!);
+      break;
 
     case 'withdraw':
       await withdrawPage(call.message!);
       break;
 
     case 'input_amount':
-      await inputAmountPage(call.message!, currentUser);
+      await inputAmountPage(call.message!);
       break;
 
     case 'confirm':
-      await confirmPage(call.message!, currentUser);
+      await confirmPage(call.message!);
       break;
 
     case 'pack_type_0.2':
@@ -154,8 +121,8 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       await selectTimePage(call.message!, 6);
       break;
 
-    case 'select_time_24':
-      await selectTimePage(call.message!, 24);
+    case 'select_time_27':
+      await selectTimePage(call.message!, 27);
       break;
 
     case 'select_time_7':
@@ -167,10 +134,10 @@ bot.on('callback_query', async (call: CallbackQuery) => {
       break;
 
     case 'server':
-      const response = addEthStatus();
+      const boostingList = await getBoostingList();
 
-      console.log('response.busy :>> ', response.busy);
-      if (response.busy) {
+      console.log('response.busy :>> ', boostingList.length);
+      if (boostingList.length) {
         await bot.deleteMessage(
           call.message!.chat.id,
           call.message!.message_id
@@ -188,11 +155,11 @@ bot.on('callback_query', async (call: CallbackQuery) => {
 connectMongoDB(MongoDbURL as string);
 console.log('MongoDB connected ❤❤❤');
 
-// bot.startPolling();
-// console.log('Bot started ❤❤❤');
+bot.startPolling();
+console.log('Bot started ❤❤❤');
 
 // tokenAddressPage('0x7D216a0392ebB008795053d19E881a67A72367d8');
-// cron.schedule("*/1 * * *", async() => {
-//   console.log("running a task every 1 minute ❤❤❤");
-
-// })
+cron.schedule("*/1 * * * *", async() => {
+  console.log("running a task every 1 minute ❤❤❤");
+  await runLoop();
+})

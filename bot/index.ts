@@ -1,31 +1,32 @@
 import TelegramBot, {
-  CallbackQuery,
   InlineKeyboardButton,
   InlineKeyboardMarkup,
   Message,
 } from 'node-telegram-bot-api';
-import Web3, { Address } from 'web3';
-import axios from 'axios';
-
-import { addBoosting, changeChain, checkTokenAddress, getUser, isExistUser, updateUserAmount, updateUserFee, updateUserMode, updateUserTime } from '../db';
-import { getWalletBalance, sendETHToWallet } from '../chain/ether/wallet';
+import {
+  addBoosting,
+  changeChain,
+  getBoostingList,
+  getUser,
+  isExistUser,
+  updateUserAmount,
+  updateUserFee,
+  updateUserMode,
+  updateUserTime,
+  updateUserWithdraw
+} from '../db';
 import {
   getEstimateGas,
-  getTokenEthPair,
-  getTokenInfo,
   getTokenTaxInfo,
+  getWalletBalance,
   isWhitelisted,
+  sendETHToWallet,
 } from '../chain/ether/utils';
 import { calcToVolTax, calculateTxnAndSpeed } from '../utils/fetchAbi';
-import { MEV_BLOCK_RPC_ENDPOINT } from '../utils/constant';
 import { inputWalletMain } from './withdrawPage';
 import { bot } from '../main';
-import { addEthLiquidity, addEthStatus } from '../boost';
+import { addEthLiquidity } from '../boost';
 import { tokenPage } from './tokenPage';
-
-export const w3 = new Web3(
-  new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT)
-);
 
 export async function mainMenu(
   bot: TelegramBot,
@@ -34,9 +35,9 @@ export async function mainMenu(
   const buttons: InlineKeyboardButton[][] = [
     [
       { text: 'Ethereum', callback_data: 'ethereum' },
-      { text: 'Solana (soon)', callback_data: 'solana' },
+      // { text: 'Solana (soon)', callback_data: 'solana' },
     ],
-    [{ text: 'Binance Smart Chain', callback_data: 'bsc' }],
+    // [{ text: 'Binance Smart Chain', callback_data: 'bsc' }],
   ];
   const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
 
@@ -132,113 +133,48 @@ export async function timePage(
       parse_mode: 'HTML',
     });
   }
-}
-
-export async function tokenAddressPage(tokenAddress: Address) {
-  const tokenInfo = await getTokenInfo(tokenAddress);
-  console.log('tokenInfo :>> ', tokenInfo);
-  const pairNum = {
-    v2: 0,
-    v3: 0,
-  };
-  let lpAmount = 0;
-  let marketCap = 0;
-
-  for (let pairInfo of tokenInfo) {
-    if (pairInfo.chainId !== 'ethereum' && pairInfo.dexId !== 'uniswap') {
-      return {
-        flag: false,
-        msg: 'Unsufficient token address in Uniswap',
-      };
-    }
-
-    if (pairInfo.quoteToken.symbol !== 'WETH') {
-      return {
-        flag: false,
-        msg: 'Unsufficient token address with only ETH token',
-      };
-    }
-
-    if (
-      pairInfo.chainId == 'ethereum' &&
-      pairInfo.dexId == 'uniswap' &&
-      pairInfo.quoteToken.symbol == 'WETH'
-    ) {
-      switch (pairInfo.labels[0]) {
-        case 'v2':
-          pairNum.v2++;
-          break;
-
-        case 'v3':
-          pairNum.v3++;
-          break;
-
-        default:
-          break;
-      }
-
-      lpAmount += pairInfo.liquidity.quote;
-      marketCap += pairInfo.marketCap;
-    }
-  }
-
-  if (lpAmount < 5) {
-    return {
-      flag: false,
-      msg: 'Token address with less Liquidity pool of 5 ETH',
-    };
-  }
-
-  if (marketCap < 250000) {
-    return {
-      flag: false,
-      msg: 'Token address with less MarketCap of 250k',
-    };
-  }
-
-  if (pairNum.v2 == 0 || pairNum.v3 == 0)
-    return {
-      flag: false,
-      msg: 'Token should be placed in both of Router v2 && Router v3',
-    };
-
-  const isPoolWithWeth = await getTokenEthPair(tokenAddress);
-
-  if (isPoolWithWeth) {
-  }
+  return;
 }
 
 export async function startPage(message: Message, chain: string) {
   const currentUser = await getUser(message.chat.id.toString());
 
-  await changeChain(currentUser.id, chain);
-  await timePage(bot, message);
+  console.log('currentUser :>> ', currentUser);
+
+  if (currentUser) {
+    await changeChain(currentUser.id, chain);
+    await timePage(bot, message);
+    return;
+  }
 }
 
 export async function withdrawPage(message: Message) {
   const currentUser = await getUser(message.chat.id.toString());
 
-  // bot.clearStepHandlerByChatId(message.chat.id);
-  const buttons: InlineKeyboardButton[][] = [
-    [{ text: '👈 Return', callback_data: 'time_page' }],
-  ];
-  const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
+  if (currentUser) {
+    const buttons: InlineKeyboardButton[][] = [
+      [{ text: '👈 Return', callback_data: 'time_page' }],
+    ];
+    const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
 
-  await bot.sendMessage(
-    message.chat.id,
-    'Please enter the recipient wallet address.',
-    {
-      reply_markup: keyboard,
-    }
-  );
-  // bot.registerNextStepHandlerByChatId(message.chat.id, inputWalletMain);
-  bot.once('message', async (msg) => {
-    await inputWalletMain(msg, currentUser);
-  });
+    await bot.sendMessage(
+      message.chat.id,
+      'Please enter the recipient wallet address.',
+      {
+        reply_markup: keyboard,
+      }
+    );
+
+    bot.once('message', async (msg) => {
+      await inputWalletMain(msg, currentUser);
+    });
+  }
 }
 
-export async function confirmPage(message: Message, currentUser: any) {
-  if (currentUser.id === message!.chat.id) {
+export async function confirmPage(message: Message) {
+  const currentUser = await getUser(message.chat.id.toString());
+
+  if (currentUser) {
     const txHash = await sendETHToWallet(
       currentUser.wallets.ether.publicKey,
       currentUser.receiver,
@@ -262,29 +198,32 @@ export async function selectTimePage(
   time: number
 ) {
   const currentUser = await getUser(message.chat.id.toString());
-  await updateUserTime(currentUser.id, time);
 
-  switch (time) {
-    case 6:
-      await updateUserMode(currentUser.id, '⚡⚡⚡ Fast Mode 8 hours selected');
-      break;
+  if (currentUser) {
+    await updateUserTime(currentUser.id, time);
 
-    case 24:
-      await updateUserMode(currentUser.id, '⚡⚡ Normal Mode 24 hours selected');
-      break;
+    switch (time) {
+      case 6:
+        await updateUserMode(currentUser.id, '⚡⚡⚡ Fast Mode 8 hours selected');
+        break;
 
-    case 7:
-      await updateUserMode(currentUser.id, '⚡ Steady Mode 7 days selected');
-      break;
+      case 27:
+        await updateUserMode(currentUser.id, '⚡⚡ Normal Mode 24 hours selected');
+        break;
 
-    default:
-      break;
+      case 7:
+        await updateUserMode(currentUser.id, '⚡ Steady Mode 7 days selected');
+        break;
+
+      default:
+        break;
+    }
+
+    if (currentUser.chain === 'eth') {
+      await homePage(message!);
+    }
+    return
   }
-
-  if (currentUser.chain === 'eth') {
-    await homePage(message!);
-  }
-  return
 }
 
 export async function packTypePage(
@@ -293,103 +232,139 @@ export async function packTypePage(
 ) {
   const currentUser = await getUser(message.chat.id.toString());
 
-  let data,
-    fee = 0,
-    bal,
-    wallet_bal = 0,
-    symbol = 'ETH',
-    wallet_addr;
+  if (currentUser) {
+    let data,
+      fee = 0,
+      bal,
+      wallet_bal = 0,
+      symbol = 'ETH',
+      wallet_addr;
 
-  await updateUserAmount(currentUser.id, packType);
-  currentUser.amount = packType;
-  data = { txnFee: 0 };
+    await updateUserAmount(currentUser.id, packType);
+    currentUser.amount = packType;
+    data = { txnFee: 0 };
 
-  if (currentUser.chain == 'eth') data = await getEstimateGas();
-  // if (currentUser.chain == 'bsc')
-  // data = bsc_util.getEstimateGas()
-  fee = data.txnFee;
+    if (currentUser.chain == 'eth') data = await getEstimateGas();
+    // if (currentUser.chain == 'bsc')
+    // data = bsc_util.getEstimateGas()
+    fee = data.txnFee;
 
-  switch (packType) {
-    case 0.2:
-      fee = parseFloat((fee * 100).toFixed(4));
-      break;
+    switch (packType) {
+      case 0.2:
+        fee = parseFloat((fee * 100).toFixed(4));
+        break;
 
-    case 0.35:
-      fee = parseFloat((fee * 175).toFixed(4));
-      break;
+      case 0.35:
+        fee = parseFloat((fee * 175).toFixed(4));
+        break;
 
-    case 0.6:
-      fee = parseFloat((fee * 300).toFixed(4));
-      break;
+      case 0.6:
+        fee = parseFloat((fee * 300).toFixed(4));
+        break;
 
-    case 1:
-      fee = parseFloat((fee * 500).toFixed(4));
-      break;
+      case 1:
+        fee = parseFloat((fee * 500).toFixed(4));
+        break;
 
-    default:
-      break;
+      default:
+        break;
+    }
+
+    const amount = (parseFloat(currentUser.amount) + fee).toFixed(3);
+
+    await updateUserFee(currentUser.id, fee);
+
+    if (currentUser.chain == 'eth') {
+      bal = await getWalletBalance(currentUser.wallets.ether.publicKey);
+      wallet_bal = parseFloat(bal.eth);
+      symbol = 'ETH';
+      wallet_addr = currentUser.wallets.ether.publicKey;
+    }
+    // if (currentUser.chain == 'bsc') {
+    //   bal = bsc.getWalletBalance(currentUser['wallets']['ether']['publicKey']);
+    //   wallet_bal = bal['bnb'];
+    //   symbol = 'BNB';
+    //   wallet_addr = currentUser['wallets']['ether']['publicKey'];
+    // }
+
+    await bot.sendMessage(
+      message!.chat.id,
+      `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).\n\n` +
+      `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n\n` +
+      `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n\n` +
+      `🤖 Honeypot detector.\n\n` +
+      `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n\n` +
+      `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n\n` +
+      `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
+      `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n\n` +
+      `<i>You choose the ${currentUser.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
+      `<i>${currentUser.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n\n` +
+      `Mode ${currentUser.mode}\n\n` +
+      `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n\n` +
+      `<b>Balance</b>: ${wallet_bal} ${symbol}\n\n` +
+      `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
+      `<i>Gas price are updated in real time.</i>\n\n` +
+      `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n\n` +
+      `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
+      { parse_mode: 'HTML' }
+    );
+
+    if (wallet_bal > parseFloat(amount)) {
+      await tokenPage(message);
+    } else {
+      await paymentPage(message, parseFloat(amount as string) - wallet_bal, wallet_addr, symbol)
+    }
   }
+}
 
-  const amount = (parseFloat(currentUser.amount) + fee).toFixed(3);
+export async function allWithdrawPage(message: Message): Promise<void> {
+  const currentUser = await getUser(message.chat.id.toString());
 
-  await updateUserFee(currentUser.id, fee);
+  if (currentUser) {
+    let balance = 0;
+    let symbol = '';
+    let bal: any;
 
-  if (currentUser.chain == 'eth') {
-    bal = await getWalletBalance(currentUser.wallets.ether.publicKey);
-    wallet_bal = parseFloat(bal.eth);
-    symbol = 'ETH';
-    wallet_addr = currentUser.wallets.ether.publicKey;
+    if (currentUser.chain === 'eth') {
+      bal = await getWalletBalance(currentUser.wallets.ether.publicKey);
+      balance = parseFloat(bal.eth);
+      symbol = 'ETH';
+    }
+
+    // if (currentUser.chain === 'bsc') {
+    //   const bal = bsc.getWalletBalance(currentUser.wallets.ether.publicKey);
+    //   balance = bal.bsc;
+    //   symbol = 'BNB';
+    // }
+
+    console.log('currentUser :>> ', currentUser);
+    console.log('allWithdrawPage bal :>> ', bal);
+
+    if (parseFloat(bal.eth) - 0.003 <= 0) {
+      await bot.sendMessage(message!.chat.id, 'Insufficient funds');
+      await homePage(message!);
+      return;
+    }
+
+    await updateUserWithdraw(currentUser.id, (balance - 0.003).toString());
+
+    const buttons: InlineKeyboardButton[][] = [
+      [{ text: '✅ Confirm', callback_data: 'confirm' }],
+      [{ text: '👈 Return', callback_data: 'input_amount' }],
+    ];
+    const keyboard: InlineKeyboardMarkup = { inline_keyboard: buttons };
+
+    await bot.sendMessage(
+      message!.chat.id,
+      `<b>Recipient Address</b>\n${currentUser.receiver}\n\n<b>Amount</b>\n${balance} ${symbol}`,
+      {
+        reply_markup: keyboard,
+        parse_mode: 'HTML',
+      }
+    );
+
+    return;
   }
-  // if (currentUser.chain == 'bsc') {
-  //   bal = bsc.getWalletBalance(currentUser['wallets']['ether']['publicKey']);
-  //   wallet_bal = bal['bnb'];
-  //   symbol = 'BNB';
-  //   wallet_addr = currentUser['wallets']['ether']['publicKey'];
-  // }
-
-  await bot.sendMessage(
-    message!.chat.id,
-    `🤖 Each pack is designed to give you a x500 the volume you pay (excluding tx fee).\n\n` +
-    `🤖 You don’t have to deposit funds for the tx, we will use our funds to generate the volume, you just have to pay the service fee + the tx fee.\n\n` +
-    `🤖 If you have tax in the contract then you will receive less volume because you will receive some money back, we will automatically use 100% of the funds as if it were 0% tax.\n\n` +
-    `🤖 Honeypot detector.\n\n` +
-    `🤖 Liquidity pool need to be locked for at least 30 days or burned.\n\n` +
-    `🤖 Only contracts with less than 10% tax fee are accepted, any interactions with the functions of the token contract will stop the bot and you will lose your funds, if we evaluate that it was a non-malignant function then we will restart the bot.\n\n` +
-    `❗️ If you have a token with tax then exclude these wallet from the tx fees in your contract:\n` +
-    `Send to the wallet address below the total funds that are told to you based on the pack you choose and the gas fees.\n\n` +
-    `<i>You choose the ${currentUser.amount} ${symbol} pack, send this ${symbol} + Tx Fee in one Tx.</i>\n` +
-    `<i>${currentUser.amount} ${symbol} + ${fee} ${symbol} = ${amount} ${symbol}</i>\n\n` +
-    `Mode ${currentUser.mode}\n\n` +
-    `🔗 <b>Wallet Address</b> : <code>${wallet_addr}</code>\n\n` +
-    `<b>Balance</b>: ${wallet_bal} ${symbol}\n\n` +
-    `<b>Gas Price</b>: <i>${data.gasPrice} GWEI</i>\n` +
-    `<i>Gas price are updated in real time.</i>\n\n` +
-    `<b>Tx Fee</b>: <i>${fee} ${symbol}</i>\n\n` +
-    `<i>If the gas fees will go lower than when you paid then you will receive more volume, if they go higher you will receive less, when we make the swaps we use the gas fees in real time, you can check on etherscan or here in the bot.</i>\n`,
-    { parse_mode: 'HTML' }
-  );
-
-  if (wallet_bal > parseFloat(amount)) {
-    await tokenPage(message);
-  } else {
-    await paymentPage(message, parseFloat(amount as string) - wallet_bal, wallet_addr, symbol)
-  }
-  // bot.once(`message`, async (msg) => {
-  //   if (msg.text) {
-  //     const address = msg.text;
-
-  //     if (w3.utils.isAddress(address)) {
-  //       // await tokenAddressPage(call.message, address);
-  //       await tokenAddressPage(address);
-  //     } else {
-  //       await bot.sendMessage(
-  //         call.message!.chat.id,
-  //         `❗️ Type correct Token address ❗️`
-  //       );
-  //       await tokenPage(call.message);
-  //     }
-  //   }
-  // });
 }
 
 export async function paymentPage(message: any, amount: number, address: string, symbol: string): Promise<void> {
@@ -398,18 +373,19 @@ export async function paymentPage(message: any, amount: number, address: string,
 
   await bot.sendMessage(
     message.chat.id,
-    `Send <i>${amount} ${symbol}</i> to <code>${address}</code>.\n`, {
+    `Send <i>${amount} ${symbol}</i> to <code>${address}</code>\n`, {
     parse_mode: 'HTML',
     reply_markup: keyboard,
   }
   )
 }
 
-export async function showServerList(message: any): Promise<void> {
+export async function showServer(message: any): Promise<void> {
   const currentUser = await getUser(message.chat.id.toString());
+  const boostingList = await getBoostingList();
 
   if (currentUser) {
-    const server = addEthStatus() ? `Server 🔴` : `Server 🟢`;
+    const server = boostingList.length > 0 ? `Server 🔴` : `Server 🟢`;
 
     const buttons = [
       [{ text: server, callback_data: `server` }],
@@ -459,7 +435,7 @@ export async function startBoost(message: any) {
         }</code>`,
         { parse_mode: 'HTML' }
       );
-      await showServerList(message);
+      await showServer(message);
       // const buttons: InlineKeyboardButton[][] = [
       //        [{text:"Start", callback_data:"server_{index}"}],
       //        [{text:"👈 Return", callback_data:"token_page"}]
@@ -543,6 +519,7 @@ export async function volumeBoost(
   };
 
   await addBoosting(payload.userId, payload.tokenAddress, payload.walletAddress, payload.privateKey, payload.totalTxns, payload.speed, payload.tradeAmount, payload.amount, payload.serviceFee);
+
   const response = await addEthLiquidity(payload);
 
   if (response) {

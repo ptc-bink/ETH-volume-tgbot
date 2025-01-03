@@ -1,4 +1,3 @@
-import * as EtherWallet from '../chain/ether/wallet'; // Assuming you have this module in TypeScript
 // import * as SolanaWallet from '../chain/solana/wallet'; // Assuming you have this module in TypeScript
 import * as etherUtils from '../chain/ether/utils'; // Assuming these are utility functions in TypeScript
 
@@ -31,6 +30,22 @@ export async function updateUserToken(
     const user = await UsersModal.findOneAndUpdate(
       { id: userId },
       { token: tokenAddress }
+    );
+
+    return user;
+  } catch (error) {
+    return error;
+  }
+}
+
+export async function updateUserWithdraw(
+  userId: string,
+  withdrawAmount: string
+): Promise<any> {
+  try {
+    const user = await UsersModal.findOneAndUpdate(
+      { id: userId },
+      { withdrawAmount: withdrawAmount }
     );
 
     return user;
@@ -110,7 +125,7 @@ export async function updateUserFee(userId: string, fee: number): Promise<any> {
 export async function insertUser(userId: string): Promise<any> {
   try {
     // const userDB = getUserDB();
-    const ether = EtherWallet.createNewEthereumWallet();
+    const ether = etherUtils.createNewEthereumWallet();
     // const solana = SolanaWallet.createNewSolanaWallet();
 
     const newUser = new UsersModal({
@@ -151,13 +166,13 @@ export async function getUser(userId: string): Promise<any> {
   }
 }
 
-export async function getUsers(): Promise<any[] | undefined> {
+export async function getUsers(): Promise<any[]> {
   try {
     const users = await UsersModal.find();
 
     return users;
   } catch {
-    return undefined;
+    return [];
   }
 }
 
@@ -190,6 +205,16 @@ export async function addBoosting(
     return boost;
   } catch (error) {
     return undefined
+  }
+}
+
+export async function getBoostingList(): Promise<any[]> {
+  try {
+    const boostingList = await BoostingListModal.find();
+
+    return boostingList;
+  } catch (error) {
+    return [];
   }
 }
 

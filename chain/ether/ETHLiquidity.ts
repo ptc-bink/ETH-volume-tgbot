@@ -13,15 +13,8 @@ import {
   SLIPPAGE,
 } from '../../utils/constant'; // import constants
 import { getEstimateConfirmTime } from './utils';
-
-const w3 = new Web3(new Web3.providers.HttpProvider(MEV_BLOCK_RPC_ENDPOINT));
-
-interface Balance {
-  eth: number;
-  wei: number;
-  token: number;
-  decimals: number;
-}
+import { w3 } from '../../main';
+import { Balance } from '../../utils/types';
 
 class ETHLiquidity {
   id: string;
