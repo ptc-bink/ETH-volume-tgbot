@@ -3,10 +3,10 @@ import {
   InlineKeyboardMarkup,
   Message,
 } from 'node-telegram-bot-api';
-import { bot } from '../main';
-import { mainMenu, w3 } from '.';
-import { getWalletBalance } from '../chain/ether/wallet';
-import { getUser, updateUserReceiver } from '../db';
+import { bot, w3 } from '../main';
+import { getUser, updateUserReceiver, updateUserWithdraw } from '../db';
+import { mainMenu } from '.';
+import { getWalletBalance } from '../chain/ether/utils';
 
 export async function withdrawPage(message: Message) {
   const currentUser = await getUser(message.chat.id.toString());
@@ -31,13 +31,12 @@ export async function withdrawPage(message: Message) {
 }
 
 export async function inputWalletMain(message: Message, currentUser: any) {
-  if (currentUser.id === message.chat.id) {
-    // bot.clearStepHandlerByChatId(message.chat.id);
+  if (currentUser.id.toString() === message.chat.id.toString()) {
     if (message.text === '/start') {
       await mainMenu(bot, message);
       return;
     }
-    console.log('w3.utils.isAddress(message.text as string) :>> ', w3.utils.isAddress(message.text as string));
+
     if (!w3.utils.isAddress(message.text as string)) {
       const button: InlineKeyboardButton[] = [
         { text: '👈 Return', callback_data: 'ethereum' },
@@ -55,19 +54,18 @@ export async function inputWalletMain(message: Message, currentUser: any) {
       bot.once('message', async (msg) => {
         await inputWalletMain(msg, currentUser);
       });
+
       return;
     }
 
     await updateUserReceiver(currentUser.id, message.text as string);
-    
-    console.log("fjdslkfjadslfjdalkj");
-    
-
-    await inputAmountPage(message, currentUser);
+    await inputAmountPage(message);
   }
 }
 
-export async function inputAmountPage(message: Message, currentUser: any) {
+export async function inputAmountPage(message: Message) {
+  const currentUser = await getUser(message.chat.id.toString());
+
   const buttons: InlineKeyboardButton[][] = [
     [
       { text: 'All', callback_data: 'all' },
@@ -89,7 +87,7 @@ export async function inputAmountPage(message: Message, currentUser: any) {
 }
 
 export async function inputAmount(message: Message, currentUser: any) {
-  if (currentUser.id === message.chat.id) {
+  if (currentUser.id.toString() === message.chat.id.toString()) {
     if (message.text === '/start') {
       await mainMenu(bot, message);
       return;
@@ -99,11 +97,11 @@ export async function inputAmount(message: Message, currentUser: any) {
 
     if (parseFloat(balance.eth) <= parseFloat(message.text as string)) {
       await bot.sendMessage(message.chat.id, 'Insufficient funds');
-      await inputAmountPage(message, currentUser);
+      await inputAmountPage(message);
       return;
     }
 
-    currentUser.withdrawAmount = message.text;
+    await updateUserWithdraw(message.chat.id.toString(), message.text as string);
 
     const buttons: InlineKeyboardButton[][] = [
       [{ text: '✅ Confirm', callback_data: 'confirm' }],

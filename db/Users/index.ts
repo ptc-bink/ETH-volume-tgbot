@@ -9,6 +9,7 @@ const Users = new mongoose.Schema({
   fee: { type: Number, require: false },
   receiver: { type: String, require: false },
   time: { type: Number, require: false },
+  withdrawAmount: {type: String, require: false},
   wallets: {
     ether: {
       type: Object,

@@ -1,6 +1,7 @@
 import { checkTokenAddress, getUser, updateUserToken } from '../db';
 import { bot } from '../main';
-import { mainMenu, showServerList } from '.';
+import { mainMenu, showServer } from '.';
+import { getTokenInfo } from '../chain/ether/utils';
 
 // Token page handler
 export async function tokenPage(message: any): Promise<void> {
@@ -11,8 +12,6 @@ export async function tokenPage(message: any): Promise<void> {
   await bot.sendMessage(message.chat.id, 'Please enter the token address.', {
     reply_markup: keyboard,
   });
-
-  console.log('before input token');
 
   bot.once('message', async (msg) => {
     await inputToken(msg, currentUser);
@@ -33,7 +32,71 @@ export async function inputToken(message: any, currentUser: any) {
       return;
     }
 
+    const tokenInfo = await getTokenInfo(message.text);
+    console.log('tokenInfo :>> ', tokenInfo);
+
+    const pairNum = {
+      v2: 0,
+      v3: 0,
+    };
+    let lpAmount = 0;
+    let marketCap = 0;
+
+    for (let pairInfo of tokenInfo) {
+      if (pairInfo.chainId !== 'ethereum' && pairInfo.dexId !== 'uniswap') {
+        await bot.sendMessage(message.chat.id, 'Unsufficient token address in Uniswap');
+        await tokenPage(message);
+        return;
+      }
+
+      if (pairInfo.quoteToken.symbol !== 'WETH') {
+        await bot.sendMessage(message.chat.id, 'Unsufficient token address with only ETH token');
+        await tokenPage(message);
+        return;
+      }
+
+      if (
+        pairInfo.chainId == 'ethereum' &&
+        pairInfo.dexId == 'uniswap' &&
+        pairInfo.quoteToken.symbol == 'WETH'
+      ) {
+        switch (pairInfo.labels[0]) {
+          case 'v2':
+            pairNum.v2++;
+            break;
+
+          case 'v3':
+            pairNum.v3++;
+            break;
+
+          default:
+            break;
+        }
+
+        lpAmount += pairInfo.liquidity.quote;
+        marketCap += pairInfo.marketCap;
+      }
+    }
+
+    if (lpAmount < 5) {
+      await bot.sendMessage(message.chat.id, 'Token address with less Liquidity pool of 5 ETH');
+      await tokenPage(message);
+      return;
+    }
+
+    if (marketCap < 250000) {
+      await bot.sendMessage(message.chat.id, 'Token address with less MarketCap of 250k');
+      await tokenPage(message);
+      return;
+    }
+
+    if (pairNum.v2 == 0 || pairNum.v3 == 0) {
+      await bot.sendMessage(message.chat.id, 'Token should be placed in both of Router v2 && Router v3');
+      await tokenPage(message);
+      return;
+    }
+
     await updateUserToken(currentUser.id, message.text);
-    await showServerList(message);
+    await showServer(message);
   }
 }

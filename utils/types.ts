@@ -14,3 +14,10 @@ export interface EstimateGas {
   txnFee: number;
   gasPrice: number;
 }
+
+export interface Balance {
+  eth: number;
+  wei: number;
+  token: number;
+  decimals: number;
+}
